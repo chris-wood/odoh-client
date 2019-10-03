@@ -1,12 +1,12 @@
 package main
 
 import (
-	"flag"
-	"log"
-	"fmt"
 	"bytes"
-	"net/http"
+	"flag"
+	"fmt"
 	"github.com/miekg/dns"
+	"log"
+	"net/http"
 )
 
 func main() {
@@ -17,7 +17,7 @@ func main() {
 
 	m := &dns.Msg{
 		MsgHdr: dns.MsgHdr{
-			Opcode:            dns.OpcodeQuery,
+			Opcode: dns.OpcodeQuery,
 		},
 		Question: make([]dns.Question, 1),
 	}
@@ -44,15 +44,15 @@ func main() {
 	fmt.Printf("%s", packed)
 
 	req, err := http.NewRequest("POST", *serverPtr, bytes.NewReader(packed))
-    if err != nil {
-        return
-    }
-    req.Header.Set("Content-Type", "application/dns-message")
+	if err != nil {
+		return
+	}
+	req.Header.Set("Content-Type", "application/dns-message")
 
-    client := &http.Client{}
-    resp, err := client.Do(req)
-    if err != nil {
-        panic(err)
-    }
-    defer resp.Body.Close()
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
 }
