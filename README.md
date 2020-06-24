@@ -1,6 +1,13 @@
 # odoh-client
 Oblivious DoH client
 
+This is a command line interface as a client for performing oblivious dns-over-https queries.
+
+### Current Support:
+
+- [x] DoH Query : `odoh-client doh --domain www.cloudflare.com. --dnsType AAAA`
+- [ ] oDoH Query: `odoh-client odoh --domain www.cloudflare.com. --dnsType AAAA --keyID 0123`
+
 # Testing
 
 Locally, using curl:

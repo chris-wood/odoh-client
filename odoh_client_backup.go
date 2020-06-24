@@ -35,12 +35,12 @@ func vendRecord(name string, qtype dns.Type) ([]byte, error) {
 	kvpairs := make(map[string]string)
 	kvpairs["alpn"] = "h2"
 	kvpairs["dohuri"] = "https://odoh-target-dot-odoh-254517.appspot.com/dns-query"
-	svcbQuery.Answer[0] = &dns.SVCB{
-		Hdr: dns.RR_Header{Name: svcbQuery.Question[0].Name, Rrtype: dns.TypeSVCB, Class: dns.ClassINET, Ttl: 0},
-		SvcFieldPriority: 0,
-		SvcDomainName: dns.Fqdn(name),
-		SvcFieldValue: kvpairs,
-	}
+	//svcbQuery.Answer[0] = &dns.SVCB{
+	//	Hdr: dns.RR_Header{Name: svcbQuery.Question[0].Name, Rrtype: dns.TypeSVCB, Class: dns.ClassINET, Ttl: 0},
+	//	SvcFieldPriority: 0,
+	//	SvcDomainName: dns.Fqdn(name),
+	//	SvcFieldValue: kvpairs,
+	//}
 
 	packedSVCBMessage, err := svcbQuery.Pack()
 	if err != nil {
@@ -50,7 +50,7 @@ func vendRecord(name string, qtype dns.Type) ([]byte, error) {
 	return packedSVCBMessage, nil
 }
 
-func main() {
+func backup_main() {
 	vendPtr := flag.Bool("vend", false, "Vend a SVCB record")
 	namePtr := flag.String("qname", "apple.com", "Query name")
 	typePtr := flag.String("qtype", "AAAA", "Query type (A, AAAA)")
