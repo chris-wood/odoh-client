@@ -28,14 +28,33 @@ var Commands = []cli.Command{
 			cli.StringFlag{
 				Name:  "domain, d",
 				Value: "www.cloudflare.com.",
+				Usage: "Domain name which needs to be resolved. Use trailing period (.).",
 			},
 			cli.StringFlag{
 				Name:  "dnstype, t",
 				Value: "AAAA",
+				Usage: "Type of DNS Question. Currently supports A, AAAA, CAA, CNAME",
 			},
 			cli.StringFlag{
-				Name: "keyID, k",
-				Value: "0000",
+				Name: "target",
+				Value: "localhost:8080",
+				Usage: "Hostname:Port format declaration of the target resolver IP address",
+			},
+			cli.StringFlag{
+				Name: "key, k",
+				Value: "00000000000000000000000000000000",  // 16 bytes or 32 byte hex string
+				Usage: "Hex Encoded String containing the Symmetric Key which is used to return an Encrypted Response",
+			},
+		},
+	},
+	{
+		Name: "get-publickey",
+		Usage: "Retrieves the public key of the target resolver",
+		Action: getTargetPublicKey,
+		Flags: []cli.Flag {
+			cli.StringFlag{
+				Name: "ip",
+				Value: "localhost:8080",
 			},
 		},
 	},

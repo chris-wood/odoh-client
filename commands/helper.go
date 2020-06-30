@@ -39,19 +39,20 @@ func prepareDnsQuestion(domain string, questionType uint16) (res []byte) {
 	return dnsSerializedString
 }
 
-func prepareOdohQuestion(domain string, questionType uint16, key []byte) (res []byte) {
+func prepareOdohQuestion(domain string, questionType uint16, key []byte, publicKey odoh.ObliviousDNSPublicKey) (res []byte, err error) {
 	dnsMessage := prepareDnsQuestion(domain, questionType)
 	fmt.Println(dnsMessage)
+
 	odohQuery := odoh.ObliviousDNSQuery{
 		ResponseKey: key,
 		DnsMessage:  dnsMessage,
 	}
-	// TODO: This needs more work around the actual Encryption necessary
-	message := odoh.ObliviousDNSMessage{
-		MessageType:      odoh.QueryType,
-		KeyID:            key,
-		EncryptedMessage: odohQuery.Marshal(),
+
+	odnsMessage, err := publicKey.EncryptQuery(odohQuery)
+	if err != nil {
+		log.Fatalf("Unable to Encrypt oDoH Question with provided Public Key of Resolver")
+		return nil, err
 	}
-	fmt.Printf("[ODOH Message] %v\n", message)
-	return odohQuery.Marshal()
+
+	return odnsMessage.Marshal(), nil
 }
