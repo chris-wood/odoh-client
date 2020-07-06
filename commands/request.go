@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 )
 
 const (
@@ -46,17 +47,35 @@ func createPlainQueryResponse(serializedDnsQueryString []byte) (response *dns.Ms
 	return dnsBytes, nil
 }
 
-func createOdohQueryResponse(serializedOdohDnsQueryString []byte) (response *odoh.ObliviousDNSMessage, err error) {
+func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, proxy string) (req *http.Request, err error) {
+	var baseurl string
+	var queries url.Values
+
+	if useProxy != true {
+		baseurl = fmt.Sprintf("https://%s/%s", targetIP, "dns-query")
+		req, err = http.NewRequest(http.MethodGet, baseurl,  bytes.NewBuffer(serializedBody))
+		queries = req.URL.Query()
+	} else {
+		baseurl = fmt.Sprintf("https://%s/%s", proxy, "proxy")
+		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
+		queries = req.URL.Query()
+		queries.Add("targethost", targetIP)
+		queries.Add("targetpath", "/dns-query")
+	}
+
+	req.Header.Set("Content-Type", "application/oblivious-dns-message")
+	req.URL.RawQuery = queries.Encode()
+
+	return req, err
+}
+
+func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool, targetIP string, proxy string) (response *odoh.ObliviousDNSMessage, err error) {
 	client := http.Client{}
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:8080/dns-query",
-		bytes.NewBuffer(serializedOdohDnsQueryString))
+	req, err := prepareHttpRequest(serializedOdohDnsQueryString, useProxy, targetIP, proxy)
+
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	queries := req.URL.Query()
-	req.Header.Set("Content-Type", "application/oblivious-dns-message")
-	req.URL.RawQuery = queries.Encode()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -133,6 +152,12 @@ func obliviousDnsRequest(c *cli.Context) error {
 	dnsTypeString := c.String("dnstype")
 	key := c.String("key")
 	targetIP := c.String("target")
+	useproxy := c.Bool("use-proxy")
+	proxy := c.String("proxy")
+
+	if useproxy != true {
+		fmt.Printf("Using %v as the proxy to send the ODOH Message\n", proxy)
+	}
 
 	odohPublicKeyBytes, err := retrievePublicKey(targetIP)
 
@@ -151,7 +176,7 @@ func obliviousDnsRequest(c *cli.Context) error {
 		log.Fatalln("Unable to Create the ODoH Query with the DNS Question")
 	}
 
-	odohMessage, err := createOdohQueryResponse(serializedODoHQueryMessage)
+	odohMessage, err := createOdohQueryResponse(serializedODoHQueryMessage, useproxy, targetIP, proxy)
 	if err != nil {
 		log.Fatalln("Unable to Obtain an Encrypted Response from the Target Resolver")
 	}
