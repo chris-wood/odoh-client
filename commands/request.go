@@ -20,9 +20,10 @@ const (
 	OBLIVIOUS_DOH = "application/oblivious-dns-message"
 )
 
-func createPlainQueryResponse(serializedDnsQueryString []byte) (response *dns.Msg, err error) {
+func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte) (response *dns.Msg, err error) {
 	client := http.Client{}
-	req, err := http.NewRequest(http.MethodGet, "http://localhost:8080/dns-query", nil)
+	queryUrl := fmt.Sprintf("https://%s/dns-query", hostname)
+	req, err := http.NewRequest(http.MethodGet, queryUrl, nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -52,6 +53,7 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 	var queries url.Values
 
 	if useProxy != true {
+		fmt.Printf("Preparing the query to dns-query endpoint with %v data\n.", serializedBody)
 		baseurl = fmt.Sprintf("https://%s/%s", targetIP, "dns-query")
 		req, err = http.NewRequest(http.MethodGet, baseurl,  bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
@@ -77,6 +79,8 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 		log.Fatalln(err)
 	}
 
+	//fmt.Printf("Request %v", req)
+
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalln(err)
@@ -90,6 +94,7 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		fmt.Println("Bailed here.")
 		log.Fatalln(err)
 	}
 
@@ -131,13 +136,14 @@ func retrievePublicKey(ip string) (response odoh.ObliviousDNSPublicKey, err erro
 func plainDnsRequest(c *cli.Context) error {
 	domainName := c.String("domain")
 	dnsTypeString := c.String("dnstype")
+	dnsTargetServer := c.String("target")
 
 	dnsType := dnsQueryStringToType(dnsTypeString)
 
 	fmt.Println("[DNS] Request : ", domainName, dnsTypeString)
 
 	serializedDnsQuestion := prepareDnsQuestion(domainName, dnsType)
-	response, err := createPlainQueryResponse(serializedDnsQuestion)
+	response, err := createPlainQueryResponse(dnsTargetServer, serializedDnsQuestion)
 
 	if err != nil {
 		log.Fatalf("Unable to obtain a valid response for the DNS Query. %v\n", err)
@@ -155,7 +161,7 @@ func obliviousDnsRequest(c *cli.Context) error {
 	useproxy := c.Bool("use-proxy")
 	proxy := c.String("proxy")
 
-	if useproxy != true {
+	if useproxy == true {
 		fmt.Printf("Using %v as the proxy to send the ODOH Message\n", proxy)
 	}
 
@@ -165,6 +171,8 @@ func obliviousDnsRequest(c *cli.Context) error {
 		fmt.Println("Failed to obtain the public key of the target resolver.", err)
 		return nil
 	}
+
+	fmt.Printf("PK Correctly fetched : %v\n", odohPublicKeyBytes)
 
 	dnsType := dnsQueryStringToType(dnsTypeString)
 

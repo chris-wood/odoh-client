@@ -18,6 +18,10 @@ var Commands = []cli.Command{
 				Name:  "dnstype, t",
 				Value: "AAAA",
 			},
+			cli.StringFlag{
+				Name: "target",
+				Value: "localhost:8080",
+			},
 		},
 	},
 	{
