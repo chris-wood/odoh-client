@@ -18,6 +18,7 @@ import (
 
 const (
 	OBLIVIOUS_DOH = "application/oblivious-dns-message"
+	HTTP_MODE = "https"
 )
 
 func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte) (response *dns.Msg, err error) {
@@ -54,11 +55,11 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 
 	if useProxy != true {
 		fmt.Printf("Preparing the query to dns-query endpoint with %v data\n.", serializedBody)
-		baseurl = fmt.Sprintf("https://%s/%s", targetIP, "dns-query")
+		baseurl = fmt.Sprintf("%s://%s/%s", HTTP_MODE, targetIP, "dns-query")
 		req, err = http.NewRequest(http.MethodGet, baseurl,  bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 	} else {
-		baseurl = fmt.Sprintf("https://%s/%s", proxy, "proxy")
+		baseurl = fmt.Sprintf("%s://%s/%s", HTTP_MODE, proxy, "proxy")
 		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 		queries.Add("targethost", targetIP)
@@ -109,7 +110,7 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 }
 
 func retrievePublicKey(ip string) (response odoh.ObliviousDNSPublicKey, err error) {
-	req, err := http.NewRequest(http.MethodGet, "https://" + ip + "/pk", nil)
+	req, err := http.NewRequest(http.MethodGet, HTTP_MODE + "://" + ip + "/pk", nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
