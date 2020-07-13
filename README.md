@@ -18,3 +18,35 @@ The explicit query for the public key of a target server without validation can 
 For the `proxy` usage, the client treats the `target` as the hostname and port of the intended target to which the proxy
 needs to forward the ODOH message and obtain a response from. The client then uses the `key` to decrypt the obtained 
 response from the Oblivious Target.
+
+### Tests
+
+| GCP Instances | Link                                           | Active  |
+|---------------|------------------------------------------------|---------|
+| Target Server | odoh-target-dot-odoh-target.wm.r.appspot.com   | &check; |
+| Proxy Server  | odoh-proxy-dot-odoh-target.wm.r.appspot.com    | &check; |
+
+#### DOH Query to target
+
+```sh
+./odoh-client doh --domain www.apple.com. --target odoh-target-dot-odoh-target.wm.r.appspot.com --dnstype AAAA
+```
+
+
+#### ODOH Query to target
+
+```sh
+./odoh-client odoh --domain www.cloudflare.com. --dnstype AAAA --target odoh-target-dot-odoh-target.wm.r.appspot.com --key 01234567890123456789012345678912
+```
+
+#### ODOH Query to target via a proxy
+
+```sh
+./odoh-client odoh --domain www.cloudflare.com. --dnstype AAAA --target odoh-target-dot-odoh-target.wm.r.appspot.com --key 01234567890123456789012345678912 --proxy odoh-proxy-dot-odoh-target.wm.r.appspot.com
+```
+
+#### Get Public Key of a target
+
+```sh
+./odoh-client get-publickey --ip odoh-target-dot-odoh-target.wm.r.appspot.com
+```

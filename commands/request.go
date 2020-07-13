@@ -55,7 +55,7 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 	if useProxy != true {
 		fmt.Printf("Preparing the query to dns-query endpoint with %v data\n.", serializedBody)
 		baseurl = fmt.Sprintf("%s://%s/%s", HTTP_MODE, targetIP, "dns-query")
-		req, err = http.NewRequest(http.MethodGet, baseurl,  bytes.NewBuffer(serializedBody))
+		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 	} else {
 		baseurl = fmt.Sprintf("%s://%s/%s", HTTP_MODE, proxy, "proxy")
@@ -155,8 +155,13 @@ func obliviousDnsRequest(c *cli.Context) error {
 	dnsTypeString := c.String("dnstype")
 	key := c.String("key")
 	targetIP := c.String("target")
-	useproxy := c.Bool("use-proxy")
 	proxy := c.String("proxy")
+
+	var useproxy bool;
+	if len(proxy) > 0 {
+		fmt.Println("Using proxy since proxy is specified.")
+		useproxy = true
+	}
 
 	if useproxy == true {
 		fmt.Printf("Using %v as the proxy to send the ODOH Message\n", proxy)
