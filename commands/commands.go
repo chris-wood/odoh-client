@@ -49,15 +49,8 @@ var Commands = []cli.Command{
 				Value: "00000000000000000000000000000000",  // 16 bytes or 32 byte hex string
 				Usage: "Hex Encoded String containing the Symmetric Key which is used to return an Encrypted Response",
 			},
-			cli.BoolFlag{
-				Name:        "use-proxy, up",
-				Usage:       "Boolean True/False value to set with proxy",
-				Required:    false,
-				Hidden:      false,
-			},
 			cli.StringFlag{
 				Name: "proxy, p",
-				Value: "localhost:8080",
 				Usage: "Hostname:Port format declaration of the proxy hostname",
 			},
 		},

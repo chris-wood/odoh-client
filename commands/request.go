@@ -157,8 +157,13 @@ func obliviousDnsRequest(c *cli.Context) error {
 	dnsTypeString := c.String("dnstype")
 	key := c.String("key")
 	targetIP := c.String("target")
-	useproxy := c.Bool("use-proxy")
 	proxy := c.String("proxy")
+
+	var useproxy bool;
+	if len(proxy) > 0 {
+		fmt.Println("Using proxy since proxy is specified.")
+		useproxy = true
+	}
 
 	if useproxy == true {
 		fmt.Printf("Using %v as the proxy to send the ODOH Message\n", proxy)
