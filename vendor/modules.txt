@@ -3,7 +3,7 @@ git.schwanenlied.me/yawning/x448.git
 # github.com/chris-wood/dns v0.0.0-20161202223856-f4d2b086946a
 ## explicit
 github.com/chris-wood/dns
-# github.com/chris-wood/odoh v0.0.0-20200713160342-5a2f10ce8b36
+# github.com/chris-wood/odoh v0.0.0-20200713191747-dca7f5ffc0b3
 ## explicit
 github.com/chris-wood/odoh
 # github.com/cisco/go-hpke v0.0.0-20200710171132-37d332d5f613
@@ -19,9 +19,6 @@ github.com/cloudflare/circl/dh/sidh/internal/p751
 github.com/cloudflare/circl/dh/sidh/internal/shake
 # github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/kelindar/binary v1.0.9
-## explicit
-github.com/kelindar/binary
 # github.com/miekg/dns v1.1.29
 ## explicit
 # github.com/russross/blackfriday/v2 v2.0.1

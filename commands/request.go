@@ -8,7 +8,6 @@ import (
 	"github.com/chris-wood/dns"
 	"github.com/chris-wood/odoh"
 	"github.com/cisco/go-hpke"
-	"github.com/kelindar/binary"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"log"
@@ -127,8 +126,7 @@ func retrievePublicKey(ip string) (response odoh.ObliviousDNSPublicKey, err erro
 		log.Fatal(err)
 	}
 
-	var odohPublicKey odoh.ObliviousDNSPublicKey
-	err = binary.Unmarshal(bodyBytes, &odohPublicKey)
+	odohPublicKey := odoh.UnMarshalObliviousDNSPublicKey(bodyBytes)
 
 	return odohPublicKey, err
 }
