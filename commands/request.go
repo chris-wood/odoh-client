@@ -79,8 +79,6 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 		log.Fatalln(err)
 	}
 
-	//fmt.Printf("Request %v", req)
-
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalln(err)
@@ -94,7 +92,7 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Bailed here.")
+		fmt.Println("Failed to read response body.")
 		log.Fatalln(err)
 	}
 
