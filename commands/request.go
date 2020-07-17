@@ -17,7 +17,8 @@ import (
 
 const (
 	OBLIVIOUS_DOH = "application/oblivious-dns-message"
-	HTTP_MODE = "https"
+	TARGET_HTTP_MODE = "http"
+	PROXY_HTTP_MODE = "http"
 )
 
 func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte) (response *dns.Msg, err error) {
@@ -54,11 +55,11 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 
 	if useProxy != true {
 		fmt.Printf("Preparing the query to dns-query endpoint with %v data\n.", serializedBody)
-		baseurl = fmt.Sprintf("%s://%s/%s", HTTP_MODE, targetIP, "dns-query")
+		baseurl = fmt.Sprintf("%s://%s/%s", TARGET_HTTP_MODE, targetIP, "dns-query")
 		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 	} else {
-		baseurl = fmt.Sprintf("%s://%s/%s", HTTP_MODE, proxy, "proxy")
+		baseurl = fmt.Sprintf("%s://%s/%s", PROXY_HTTP_MODE, proxy, "proxy")
 		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 		queries.Add("targethost", targetIP)
@@ -68,7 +69,13 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 	req.Header.Set("Content-Type", "application/oblivious-dns-message")
 	req.URL.RawQuery = queries.Encode()
 
+	fmt.Printf("Making a request to %v\n", req);
+
 	return req, err
+}
+
+func CreateODOHQueryResponse(serializedOdohQueryString []byte, targetIP string) (response *odoh.ObliviousDNSMessage, err error) {
+	return createOdohQueryResponse(serializedOdohQueryString, false, targetIP, "")
 }
 
 func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool, targetIP string, proxy string) (response *odoh.ObliviousDNSMessage, err error) {
@@ -92,9 +99,11 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Failed to read response body.")
+		log.Println("Failed to read response body.")
 		log.Fatalln(err)
 	}
+
+	log.Printf("Body %v\n", bodyBytes)
 
 	hexBodyBytes := hex.EncodeToString(bodyBytes)
 	log.Printf("[ODOH] Hex Encrypted Response : %v\n", hexBodyBytes)
@@ -108,8 +117,13 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 	return odohQueryResponse, nil
 }
 
+func RetrievePublicKey(ip string) (response odoh.ObliviousDNSPublicKey, err error) {
+	res, err := retrievePublicKey(ip)
+	return res, err
+}
+
 func retrievePublicKey(ip string) (response odoh.ObliviousDNSPublicKey, err error) {
-	req, err := http.NewRequest(http.MethodGet, HTTP_MODE + "://" + ip + "/pk", nil)
+	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE + "://" + ip + "/pk", nil)
 	if err != nil {
 		log.Fatalln(err)
 	}

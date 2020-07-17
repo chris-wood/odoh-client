@@ -23,10 +23,19 @@ func dnsQueryStringToType(stringType string) uint16 {
 	}
 }
 
+func ParseDNSResponse(data []byte) (*dns.Msg, error) {
+	return parseDnsResponse(data)
+}
+
 func parseDnsResponse(data []byte) (*dns.Msg, error) {
 	msg := &dns.Msg{}
 	err := msg.Unpack(data)
 	return msg, err
+}
+
+func PrepareDNSQuestion(domain string, questionType uint16) (res []byte) {
+	res = prepareDnsQuestion(domain, questionType)
+	return res
 }
 
 func prepareDnsQuestion(domain string, questionType uint16) (res []byte) {
@@ -37,6 +46,10 @@ func prepareDnsQuestion(domain string, questionType uint16) (res []byte) {
 		log.Fatalf("Unable to Pack the dnsMessage correctly %v", err)
 	}
 	return dnsSerializedString
+}
+
+func PrepareODOHQuestion(domain string, questionType uint16, key []byte, publicKey odoh.ObliviousDNSPublicKey) (res []byte, err error) {
+	return prepareOdohQuestion(domain, questionType, key, publicKey);
 }
 
 func prepareOdohQuestion(domain string, questionType uint16, key []byte, publicKey odoh.ObliviousDNSPublicKey) (res []byte, err error) {
