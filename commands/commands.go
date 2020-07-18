@@ -45,11 +45,6 @@ var Commands = []cli.Command{
 				Usage: "Hostname:Port format declaration of the target resolver hostname",
 			},
 			cli.StringFlag{
-				Name: "key, k",
-				Value: "00000000000000000000000000000000",  // 16 bytes or 32 byte hex string
-				Usage: "Hex Encoded String containing the Symmetric Key which is used to return an Encrypted Response",
-			},
-			cli.StringFlag{
 				Name: "proxy, p",
 				Usage: "Hostname:Port format declaration of the proxy hostname",
 			},
