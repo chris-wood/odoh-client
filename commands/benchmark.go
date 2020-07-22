@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli"
 	"log"
 	mathrand "math/rand"
+	"net/http"
 	"os"
 	"time"
 )
@@ -49,8 +50,7 @@ func prepareSymmetricKeys(quantity int) [][]byte {
 //	log.Printf("Size of the Response for [%v] is [%v] and [%v] to [%v] = [%v] using target [%v]", experiment.hostname, len(answer), s.UnixNano(), e.UnixNano(), e.Sub(s).Microseconds(), experiment.target)
 //}
 
-func workflow(e Experiment,  channel chan Experiment) {
-
+func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 	hostname := e.hostname
 	dnsType := e.dnsType
 	symmetricKey := e.key
@@ -66,8 +66,23 @@ func workflow(e Experiment,  channel chan Experiment) {
 		log.Fatalf("Error while preparing OdohQuestion: %v", err)
 	}
 	requestTime := time.Since(start)
-	odohMessage, err := CreateOdohQueryResponse(serializedODoHQueryMessage, false, target, "")
+	odohMessage, err := CreateOdohQueryResponse(serializedODoHQueryMessage, false, target, "", client)
 	responseTime := time.Since(start)
+
+	if err != nil {
+		exp := Experiment{
+			hostname:        hostname,
+			dnsType:         dnsType,
+			key:             symmetricKey,
+			targetPublicKey: targetPublicKey,
+			target:          target,
+			sTime:           e.sTime,
+			eTime:           time.Now(),
+			response:        []byte(err.Error()),
+		}
+		channel <- exp
+		return
+	}
 
 	dnsAnswer, err := ValidateEncryptedResponse(odohMessage, symmetricKey)
 	validationTime := time.Since(start)
@@ -138,10 +153,12 @@ func benchmarkClient(c *cli.Context) {
 	const dnsMessageType = dns.TypeA
 
 	// Obtain all the keys for the targets.
-	targets := []string{"odoh-target-dot-odoh-target.wm.r.appspot.com", "odoh-target-rs.crypto-team.workers.dev"}
+	//targets := []string{"odoh-target-dot-odoh-target.wm.r.appspot.com", "odoh-target-rs.crypto-team.workers.dev"}
+	targets := []string{"odoh-target-rs.crypto-team.workers.dev"}
+	//targets := []string{"localhost:8080", "localhost:8787"}
 	// TODO(@sudheesh): Discover the targets from a service.
 	for _, target := range targets {
-		pkbytes, err := RetrievePublicKey(target)
+		pkbytes, err := RetrievePublicKey(target, state.client)
 		if err != nil {
 			log.Fatalf("Unable to obtain the public key from %v. Error %v", target, err)
 		}
@@ -154,8 +171,6 @@ func benchmarkClient(c *cli.Context) {
 	// Part 1 : Initialize and Prepare the Keys to the request.
 	symmetricKeys := prepareSymmetricKeys(len(hostnames))
 	log.Printf("%v symmetric keys chosen", len(symmetricKeys))
-	
-	//var wg sync.WaitGroup
 
 	start := time.Now()
 	responseChannel := make(chan Experiment, len(hostnames))
@@ -177,7 +192,7 @@ func benchmarkClient(c *cli.Context) {
 		}
 
 		log.Printf("Request %v\n", index)
-		go workflow(e, responseChannel)
+		go workflow(e, state.client, responseChannel)
 	}
 	responseHandler(len(hostnames), responseChannel)
 	close(responseChannel)
