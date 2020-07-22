@@ -1,10 +1,10 @@
 package commands
 
 import (
-	"fmt"
 	"github.com/chris-wood/dns"
 	"github.com/chris-wood/odoh"
 	"log"
+	"time"
 )
 
 // Function for Converting CLI DNS Query Type to the uint16 Datatype
@@ -40,8 +40,9 @@ func PrepareDnsQuestion(domain string, questionType uint16) (res []byte) {
 }
 
 func PrepareOdohQuestion(domain string, questionType uint16, key []byte, publicKey odoh.ObliviousDNSPublicKey) (res []byte, err error) {
+	start := time.Now()
 	dnsMessage := PrepareDnsQuestion(domain, questionType)
-	fmt.Println(dnsMessage)
+	prepareQuestionTime := time.Since(start)
 
 	odohQuery := odoh.ObliviousDNSQuery{
 		ResponseKey: key,
@@ -49,10 +50,14 @@ func PrepareOdohQuestion(domain string, questionType uint16, key []byte, publicK
 	}
 
 	odnsMessage, err := publicKey.EncryptQuery(odohQuery)
+	encryptionTime := time.Since(start)
 	if err != nil {
 		log.Fatalf("Unable to Encrypt oDoH Question with provided Public Key of Resolver")
 		return nil, err
 	}
+
+	log.Printf("Time to Prepare DNS Question : [%v]\n", prepareQuestionTime.Milliseconds())
+	log.Printf("Time to Encrypt DNS Question : [%v]\n", encryptionTime.Milliseconds())
 
 	return odnsMessage.Marshal(), nil
 }

@@ -61,4 +61,19 @@ var Commands = []cli.Command{
 			},
 		},
 	},
+	{
+		Name: "bench",
+		Usage: "Performs a benchmark for ODOH Target Resolver",
+		Action: benchmarkClient,
+		Flags: []cli.Flag {
+			cli.StringFlag{
+				Name: "data",
+				Value: "dataset.csv",
+			},
+			cli.Uint64Flag{
+				Name: "pick",
+				Value: 10,
+			},
+		},
+	},
 }

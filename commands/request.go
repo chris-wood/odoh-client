@@ -70,7 +70,7 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 	req.Header.Set("Content-Type", "application/oblivious-dns-message")
 	req.URL.RawQuery = queries.Encode()
 
-	fmt.Printf("Making a request to %v\n", req);
+	//fmt.Printf("Making a request to %v\n", req);
 
 	return req, err
 }
@@ -100,8 +100,8 @@ func CreateOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 		log.Fatalln(err)
 	}
 
-	log.Printf("Body %v\n", bodyBytes)
-	log.Printf("Body as string [ %v ] \n", string(bodyBytes))
+	//log.Printf("Body %v\n", bodyBytes)
+	//log.Printf("Body as string [ %v ] \n", string(bodyBytes))
 
 	hexBodyBytes := hex.EncodeToString(bodyBytes)
 	log.Printf("[ODOH] Hex Encrypted Response : %v\n", hexBodyBytes)
