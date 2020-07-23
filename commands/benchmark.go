@@ -3,6 +3,7 @@ package commands
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/json"
 	"github.com/chris-wood/dns"
 	"github.com/chris-wood/odoh"
 	"github.com/urfave/cli"
@@ -14,15 +15,24 @@ import (
 )
 
 type Experiment struct {
-	hostname string
-	dnsType uint16
-	key []byte
-	targetPublicKey odoh.ObliviousDNSPublicKey
-	target string
+	Hostname        string
+	DnsType         uint16
+	Key             []byte
+	TargetPublicKey odoh.ObliviousDNSPublicKey
+	Target          string
 	// Timing parameters
-	sTime time.Time
-	eTime time.Time
-	response []byte
+	STime    time.Time
+	ETime    time.Time
+	Response []byte
+}
+
+func (e *Experiment) serialize() string {
+	exp := &e
+	response, err := json.Marshal(exp)
+	if err != nil {
+		log.Printf("Unable to log the information correctly.")
+	}
+	return string(response)
 }
 
 func prepareSymmetricKeys(quantity int) [][]byte {
@@ -33,7 +43,7 @@ func prepareSymmetricKeys(quantity int) [][]byte {
 		key := make([]byte, 16)
 		_, err := rand.Read(key)
 		if err != nil {
-			log.Fatalf("Unable to read random bytes to make a symmetric key.\n")
+			log.Fatalf("Unable to read random bytes to make a symmetric Key.\n")
 		}
 		result[i] = key
 	}
@@ -41,21 +51,12 @@ func prepareSymmetricKeys(quantity int) [][]byte {
 	return result
 }
 
-//func worker(id int, experiment Experiment) {
-//	log.Printf("Request %v\n", id)
-//	s := time.Now()
-//	go workflow(experiment.hostname, experiment.dnsType, experiment.key, experiment.targetPublicKey, experiment.target, responseChannel)
-//	e := time.Now()
-//	log.Printf("Response %v\n", id)
-//	log.Printf("Size of the Response for [%v] is [%v] and [%v] to [%v] = [%v] using target [%v]", experiment.hostname, len(answer), s.UnixNano(), e.UnixNano(), e.Sub(s).Microseconds(), experiment.target)
-//}
-
 func workflow(e Experiment, client *http.Client, channel chan Experiment) {
-	hostname := e.hostname
-	dnsType := e.dnsType
-	symmetricKey := e.key
-	targetPublicKey := e.targetPublicKey
-	target := e.target
+	hostname := e.Hostname
+	dnsType := e.DnsType
+	symmetricKey := e.Key
+	targetPublicKey := e.TargetPublicKey
+	target := e.Target
 
 	start := time.Now()
 	requestId := sha256.Sum256(symmetricKey)
@@ -71,14 +72,14 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 
 	if err != nil {
 		exp := Experiment{
-			hostname:        hostname,
-			dnsType:         dnsType,
-			key:             symmetricKey,
-			targetPublicKey: targetPublicKey,
-			target:          target,
-			sTime:           e.sTime,
-			eTime:           time.Now(),
-			response:        []byte(err.Error()),
+			Hostname:        hostname,
+			DnsType:         dnsType,
+			Key:             symmetricKey,
+			TargetPublicKey: targetPublicKey,
+			Target:          target,
+			STime:           e.STime,
+			ETime:           time.Now(),
+			Response:        []byte(err.Error()),
 		}
 		channel <- exp
 		return
@@ -101,29 +102,33 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 	log.Printf("DNS Answer : [%v]\n", dnsAnswerBytes)
 	log.Printf("====================================")
 	exp := Experiment{
-		hostname:        hostname,
-		dnsType:         dnsType,
-		key:             symmetricKey,
-		targetPublicKey: targetPublicKey,
-		target:          target,
-		sTime:           e.sTime,
-		eTime:           time.Now(),
-		response:        dnsAnswerBytes,
+		Hostname:        hostname,
+		DnsType:         dnsType,
+		Key:             symmetricKey,
+		TargetPublicKey: targetPublicKey,
+		Target:          target,
+		STime:           e.STime,
+		ETime:           time.Now(),
+		Response:        dnsAnswerBytes,
 	}
+	log.Printf("Experiment : %v", exp.serialize())
 	channel <- exp
 }
 
-func responseHandler(numberOfChannels int, responseChannel chan Experiment) {
+func responseHandler(numberOfChannels int, responseChannel chan Experiment) []string {
+	responses := make([]string, 0)
 	for index := 0; index < numberOfChannels; index++ {
 		answerStructure := <- responseChannel
-		answer := answerStructure.response
-		sTime := answerStructure.sTime
-		eTime := answerStructure.eTime
-		hostname := answerStructure.hostname
-		target := answerStructure.target
+		answer := answerStructure.Response
+		sTime := answerStructure.STime
+		eTime := answerStructure.ETime
+		hostname := answerStructure.Hostname
+		target := answerStructure.Target
 		log.Printf("Response %v\n", index)
-		log.Printf("Size of the Response for [%v] is [%v] and [%v] to [%v] = [%v] using target [%v]", hostname, len(answer), sTime.UnixNano(), eTime.UnixNano(), eTime.Sub(sTime).Microseconds(), target)
+		log.Printf("Size of the Response for [%v] is [%v] and [%v] to [%v] = [%v] using Target [%v]", hostname, len(answer), sTime.UnixNano(), eTime.UnixNano(), eTime.Sub(sTime).Microseconds(), target)
+		responses = append(responses, answerStructure.serialize())
 	}
+	return responses
 }
 
 func benchmarkClient(c *cli.Context) {
@@ -148,19 +153,22 @@ func benchmarkClient(c *cli.Context) {
 
 	// Create a base state of the experiment
 	state := GetInstance()
+	telemetryState := getTelemetryInstance()
+	telemetryResponse := telemetryState.getClusterInformation()
+	log.Printf("Server: %s", telemetryResponse["version"].(map[string]interface{})["number"])
 
 	// Create network requests concurrently.
 	const dnsMessageType = dns.TypeA
 
 	// Obtain all the keys for the targets.
-	//targets := []string{"odoh-target-dot-odoh-target.wm.r.appspot.com", "odoh-target-rs.crypto-team.workers.dev"}
-	targets := []string{"odoh-target-rs.crypto-team.workers.dev"}
+	//targets := []string{"odoh-Target-dot-odoh-Target.wm.r.appspot.com", "odoh-Target-rs.crypto-team.workers.dev"}
+	targets := []string{"odoh-Target-rs.crypto-team.workers.dev"}
 	//targets := []string{"localhost:8080", "localhost:8787"}
 	// TODO(@sudheesh): Discover the targets from a service.
 	for _, target := range targets {
 		pkbytes, err := RetrievePublicKey(target, state.client)
 		if err != nil {
-			log.Fatalf("Unable to obtain the public key from %v. Error %v", target, err)
+			log.Fatalf("Unable to obtain the public Key from %v. Error %v", target, err)
 		}
 		state.InsertKey(target, pkbytes)
 	}
@@ -183,20 +191,23 @@ func benchmarkClient(c *cli.Context) {
 			log.Fatalf("Unable to retrieve the PK requested")
 		}
 		e := Experiment{
-			hostname:        hostname,
-			dnsType:         dnsMessageType,
-			key:             key,
-			targetPublicKey: pkOfTarget,
-			target:          chosenTarget,
-			sTime: time.Now(),
+			Hostname:        hostname,
+			DnsType:         dnsMessageType,
+			Key:             key,
+			TargetPublicKey: pkOfTarget,
+			Target:          chosenTarget,
+			STime:           time.Now(),
 		}
 
 		log.Printf("Request %v\n", index)
 		go workflow(e, state.client, responseChannel)
 	}
-	responseHandler(len(hostnames), responseChannel)
+	responses := responseHandler(len(hostnames), responseChannel)
 	close(responseChannel)
 
 	totalResponse := time.Since(start)
 	log.Printf("Time to perform [%v] workflow tasks : [%v]", len(hostnames), totalResponse.Milliseconds())
+
+	log.Printf("Collected [%v] Responses.", len(responses))
+	telemetryState.streamDataToElastic(responses)
 }
