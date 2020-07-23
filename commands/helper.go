@@ -23,13 +23,13 @@ func dnsQueryStringToType(stringType string) uint16 {
 	}
 }
 
-func ParseDnsResponse(data []byte) (*dns.Msg, error) {
+func parseDnsResponse(data []byte) (*dns.Msg, error) {
 	msg := &dns.Msg{}
 	err := msg.Unpack(data)
 	return msg, err
 }
 
-func PrepareDnsQuestion(domain string, questionType uint16) (res []byte) {
+func prepareDnsQuestion(domain string, questionType uint16) (res []byte) {
 	dnsMessage := new(dns.Msg)
 	dnsMessage.SetQuestion(domain, questionType)
 	dnsSerializedString, err := dnsMessage.Pack()
@@ -39,9 +39,9 @@ func PrepareDnsQuestion(domain string, questionType uint16) (res []byte) {
 	return dnsSerializedString
 }
 
-func PrepareOdohQuestion(domain string, questionType uint16, key []byte, publicKey odoh.ObliviousDNSPublicKey) (res []byte, err error) {
+func prepareOdohQuestion(domain string, questionType uint16, key []byte, publicKey odoh.ObliviousDNSPublicKey) (res []byte, err error) {
 	start := time.Now()
-	dnsMessage := PrepareDnsQuestion(domain, questionType)
+	dnsMessage := prepareDnsQuestion(domain, questionType)
 	prepareQuestionTime := time.Since(start)
 
 	odohQuery := odoh.ObliviousDNSQuery{

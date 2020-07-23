@@ -46,7 +46,7 @@ func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte) 
 	if err != nil {
 		log.Fatal(err)
 	}
-	dnsBytes, err := ParseDnsResponse(bodyBytes)
+	dnsBytes, err := parseDnsResponse(bodyBytes)
 
 	return dnsBytes, nil
 }
@@ -74,7 +74,7 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 	return req, err
 }
 
-func CreateOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool, targetIP string, proxy string, client *http.Client) (response *odoh.ObliviousDNSMessage, err error) {
+func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool, targetIP string, proxy string, client *http.Client) (response *odoh.ObliviousDNSMessage, err error) {
 	req, err := prepareHttpRequest(serializedOdohDnsQueryString, useProxy, targetIP, proxy)
 
 	if err != nil {
@@ -144,7 +144,7 @@ func plainDnsRequest(c *cli.Context) error {
 
 	fmt.Println("[DNS] Request : ", domainName, dnsTypeString)
 
-	serializedDnsQuestion := PrepareDnsQuestion(domainName, dnsType)
+	serializedDnsQuestion := prepareDnsQuestion(domainName, dnsType)
 	response, err := createPlainQueryResponse(dnsTargetServer, serializedDnsQuestion)
 
 	if err != nil {
@@ -191,23 +191,23 @@ func obliviousDnsRequest(c *cli.Context) error {
 
 	fmt.Println("[ODNS] Request : ", domainName, dnsTypeString, key)
 
-	serializedODoHQueryMessage, err := PrepareOdohQuestion(domainName, dnsType, key, odohPublicKeyBytes)
+	serializedODoHQueryMessage, err := prepareOdohQuestion(domainName, dnsType, key, odohPublicKeyBytes)
 
 	if err != nil {
 		log.Fatalln("Unable to Create the ODoH Query with the DNS Question")
 	}
 
-	odohMessage, err := CreateOdohQueryResponse(serializedODoHQueryMessage, useproxy, targetIP, proxy, &client)
+	odohMessage, err := createOdohQueryResponse(serializedODoHQueryMessage, useproxy, targetIP, proxy, &client)
 	if err != nil {
 		log.Fatalln("Unable to Obtain an Encrypted Response from the Target Resolver")
 	}
 
-	dnsResponse, err := ValidateEncryptedResponse(odohMessage, key)
+	dnsResponse, err := validateEncryptedResponse(odohMessage, key)
 	fmt.Println("[ODOH] Response : \n", dnsResponse)
 	return nil
 }
 
-func ValidateEncryptedResponse(message *odoh.ObliviousDNSMessage, key []byte) (response *dns.Msg, err error) {
+func validateEncryptedResponse(message *odoh.ObliviousDNSMessage, key []byte) (response *dns.Msg, err error) {
 	odohResponse := odoh.ObliviousDNSResponse{ResponseKey: key}
 
 	responseMessageType := message.MessageType
@@ -239,7 +239,7 @@ func ValidateEncryptedResponse(message *odoh.ObliviousDNSMessage, key []byte) (r
 
 	log.Printf("[ODOH] [Decrypted Response] : %v\n", decryptedResponse)
 
-	dnsBytes, err := ParseDnsResponse(decryptedResponse)
+	dnsBytes, err := parseDnsResponse(decryptedResponse)
 	if err != nil {
 		log.Printf("Unable to parse DNS bytes after decryption of the message from target server.")
 		return nil, err

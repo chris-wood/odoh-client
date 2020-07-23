@@ -61,13 +61,13 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 	start := time.Now()
 	requestId := sha256.Sum256(symmetricKey)
 	hashingTime := time.Since(start)
-	serializedODoHQueryMessage, err := PrepareOdohQuestion(hostname, dnsType, symmetricKey, targetPublicKey)
+	serializedODoHQueryMessage, err := prepareOdohQuestion(hostname, dnsType, symmetricKey, targetPublicKey)
 	timeToPrepareQuestionAndSerialize := time.Since(start)
 	if err != nil {
 		log.Fatalf("Error while preparing OdohQuestion: %v", err)
 	}
 	requestTime := time.Since(start)
-	odohMessage, err := CreateOdohQueryResponse(serializedODoHQueryMessage, false, target, "", client)
+	odohMessage, err := createOdohQueryResponse(serializedODoHQueryMessage, false, target, "", client)
 	responseTime := time.Since(start)
 
 	if err != nil {
@@ -85,7 +85,7 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 		return
 	}
 
-	dnsAnswer, err := ValidateEncryptedResponse(odohMessage, symmetricKey)
+	dnsAnswer, err := validateEncryptedResponse(odohMessage, symmetricKey)
 	validationTime := time.Since(start)
 
 	dnsAnswerBytes, err := dnsAnswer.Pack()
