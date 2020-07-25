@@ -3,6 +3,7 @@ package commands
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"github.com/chris-wood/dns"
 	"github.com/chris-wood/odoh"
@@ -14,16 +15,42 @@ import (
 	"time"
 )
 
+// This RunningTime structure contains the epoch timestamps for each of the operations
+// taking place. The explanations are as follows:
+// 1. Start => Epoch time at which the client starts to prepare the question
+// 2. ClientHashingOverheadTime => Epoch time at which the client hashes the symmetric key used for request identification.
+// 3. ClientQueryEncryptionTime => Epoch time at which the client completes the encryption and serialization of the question.
+// 4. ClientUpstreamRequestTime => Epoch time indicating the start of the network request.
+// 5. ClientDownstreamResponseTime => Epoch time indicating the receipt of the response and deserialization into ObliviousDNSMessage
+// 6. EndTime => Epoch time indicating the end of all tasks for the request.
+// NOTE: All timestamps are stored in NanoSecond granularity and need to be converted into microseconds (/1000.0) or milliseconds (/1000.0^2)
+type RunningTime struct {
+	Start                        int64
+	ClientHashingOverheadTime    int64
+	ClientQueryEncryptionTime    int64
+	ClientUpstreamRequestTime    int64
+	ClientDownstreamResponseTime int64
+	ClientAnswerDecryptionTime   int64
+	EndTime                      int64
+}
+
 type Experiment struct {
 	Hostname        string
 	DnsType         uint16
 	Key             []byte
 	TargetPublicKey odoh.ObliviousDNSPublicKey
-	Target          string
 	// Timing parameters
-	STime    time.Time
-	ETime    time.Time
-	Response []byte
+	STime time.Time
+	ETime time.Time
+	// Instrumentation
+	RequestID   string
+	DnsQuestion []byte
+	DnsAnswer   []byte
+	Proxy       string
+	Target      string
+	Timestamp   RunningTime
+	// Experiment status
+	Status bool
 }
 
 func (e *Experiment) serialize() string {
@@ -56,60 +83,91 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 	dnsType := e.DnsType
 	symmetricKey := e.Key
 	targetPublicKey := e.TargetPublicKey
+	proxy := e.Proxy
 	target := e.Target
 
+	shouldUseProxy := false
+
+	if proxy != "" {
+		shouldUseProxy = true
+	}
+
+	rt := RunningTime{}
+
 	start := time.Now()
+	rt.Start = start.UnixNano()
 	requestId := sha256.Sum256(symmetricKey)
-	hashingTime := time.Since(start)
+	hashingTime := time.Now().UnixNano()
+	rt.ClientHashingOverheadTime = hashingTime
 	serializedODoHQueryMessage, err := prepareOdohQuestion(hostname, dnsType, symmetricKey, targetPublicKey)
-	timeToPrepareQuestionAndSerialize := time.Since(start)
+	timeToPrepareQuestionAndSerialize := time.Now().UnixNano()
+	rt.ClientQueryEncryptionTime = timeToPrepareQuestionAndSerialize
 	if err != nil {
 		log.Fatalf("Error while preparing OdohQuestion: %v", err)
 	}
-	requestTime := time.Since(start)
-	odohMessage, err := createOdohQueryResponse(serializedODoHQueryMessage, false, target, "", client)
-	responseTime := time.Since(start)
+	requestTime := time.Now().UnixNano()
+	rt.ClientUpstreamRequestTime = requestTime
+	odohMessage, err := createOdohQueryResponse(serializedODoHQueryMessage, shouldUseProxy, target, proxy, client)
 
-	if err != nil {
+	responseTime := time.Now().UnixNano()
+	rt.ClientDownstreamResponseTime = responseTime
+
+	if err != nil || odohMessage == nil {
 		exp := Experiment{
 			Hostname:        hostname,
 			DnsType:         dnsType,
 			Key:             symmetricKey,
 			TargetPublicKey: targetPublicKey,
 			Target:          target,
+			Proxy:           proxy,
 			STime:           e.STime,
 			ETime:           time.Now(),
-			Response:        []byte(err.Error()),
+			DnsAnswer:       []byte(err.Error()),
+			Status:          false,
+			Timestamp:       rt,
 		}
 		channel <- exp
 		return
 	}
 
+	log.Printf("[DNSANSWER] %v %v\n", odohMessage, symmetricKey)
 	dnsAnswer, err := validateEncryptedResponse(odohMessage, symmetricKey)
-	validationTime := time.Since(start)
+	validationTime := time.Now().UnixNano()
+	rt.ClientAnswerDecryptionTime = validationTime
 
 	dnsAnswerBytes, err := dnsAnswer.Pack()
+	endTime := time.Now().UnixNano()
+	rt.EndTime = endTime
 
 	log.Printf("=======ODOH Request for [%v]========\n", hostname)
 	log.Printf("Request ID : [%x]\n", requestId[:])
 	log.Printf("Start Time : [%v]\n", start.UnixNano())
-	log.Printf("Time @ Hash the Symmetric Key as ID: [%v]\n", hashingTime.Microseconds())
-	log.Printf("Time @ Prepare Question and Serialize : [%v]\n", timeToPrepareQuestionAndSerialize.Microseconds())
-	log.Printf("Time @ Starting ODOH Request  : [%v]\n", requestTime.Microseconds())
-	log.Printf("The network requests come in between here.\n")
-	log.Printf("Time @ Received ODOH Response : [%v]\n", responseTime.Microseconds())
-	log.Printf("Time @ Finished Validation Response : [%v]\n", validationTime.Microseconds())
+	log.Printf("Time @ Hash the Symmetric Key as ID: [%v]\n", hashingTime)
+	log.Printf("Time @ Prepare Question and Serialize : [%v]\n", timeToPrepareQuestionAndSerialize)
+	log.Printf("Time @ Starting ODOH Request  : [%v]\n", requestTime)
+	log.Printf("Time @ Received ODOH Response : [%v]\n", responseTime)
+	log.Printf("Time @ Finished Validation Response : [%v]\n", validationTime)
 	log.Printf("DNS Answer : [%v]\n", dnsAnswerBytes)
 	log.Printf("====================================")
+	var requestIDString []byte = requestId[:]
+	log.Printf("Requested ID : [%s]", hex.EncodeToString(requestIDString))
 	exp := Experiment{
 		Hostname:        hostname,
 		DnsType:         dnsType,
 		Key:             symmetricKey,
 		TargetPublicKey: targetPublicKey,
-		Target:          target,
-		STime:           e.STime,
-		ETime:           time.Now(),
-		Response:        dnsAnswerBytes,
+		// Overall timing parameters
+		STime: e.STime,
+		ETime: time.Now(),
+		// Instrumentation
+		RequestID:   hex.EncodeToString(requestIDString),
+		DnsQuestion: serializedODoHQueryMessage,
+		DnsAnswer:   dnsAnswerBytes,
+		Proxy:       proxy,
+		Target:      target,
+		Timestamp:   rt,
+		// Experiment status
+		Status: true,
 	}
 	log.Printf("Experiment : %v", exp.serialize())
 	channel <- exp
@@ -118,14 +176,16 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 func responseHandler(numberOfChannels int, responseChannel chan Experiment) []string {
 	responses := make([]string, 0)
 	for index := 0; index < numberOfChannels; index++ {
-		answerStructure := <- responseChannel
-		answer := answerStructure.Response
+		answerStructure := <-responseChannel
+		answer := answerStructure.DnsAnswer
 		sTime := answerStructure.STime
 		eTime := answerStructure.ETime
 		hostname := answerStructure.Hostname
 		target := answerStructure.Target
+		proxy := answerStructure.Proxy
 		log.Printf("Response %v\n", index)
-		log.Printf("Size of the Response for [%v] is [%v] and [%v] to [%v] = [%v] using Target [%v]", hostname, len(answer), sTime.UnixNano(), eTime.UnixNano(), eTime.Sub(sTime).Microseconds(), target)
+		log.Printf("Size of the Response for [%v] is [%v] and [%v] to [%v] = [%v] using Proxy [%v] using Target [%v]",
+			hostname, len(answer), sTime.UnixNano(), eTime.UnixNano(), eTime.Sub(sTime).Microseconds(), proxy, target)
 		responses = append(responses, answerStructure.serialize())
 	}
 	return responses
@@ -161,8 +221,9 @@ func benchmarkClient(c *cli.Context) {
 	const dnsMessageType = dns.TypeA
 
 	// Obtain all the keys for the targets.
-	//targets := []string{"odoh-Target-dot-odoh-Target.wm.r.appspot.com", "odoh-Target-rs.crypto-team.workers.dev"}
-	targets := []string{"odoh-Target-rs.crypto-team.workers.dev"}
+	//targets := []string{"odoh-target-dot-odoh-Target.wm.r.appspot.com", "odoh-target-rs.crypto-team.workers.dev"}
+	targets := []string{"odoh-target-dot-odoh-target.wm.r.appspot.com"}
+	proxies := []string{"odoh-rs-proxy.crypto-team.workers.dev", "odoh-proxy-dot-odoh-target.wm.r.appspot.com"}
 	//targets := []string{"localhost:8080", "localhost:8787"}
 	// TODO(@sudheesh): Discover the targets from a service.
 	for _, target := range targets {
@@ -186,9 +247,13 @@ func benchmarkClient(c *cli.Context) {
 		hostname := hostnames[index]
 		key := symmetricKeys[index]
 		chosenTarget := targets[mathrand.Intn(keysAvailable)]
+		chosenProxy  := proxies[mathrand.Intn(len(proxies))]
 		pkOfTarget, err := state.GetPublicKey(chosenTarget)
 		if err != nil {
 			log.Fatalf("Unable to retrieve the PK requested")
+		}
+		if index % 2  == 0 {
+			chosenProxy = ""
 		}
 		e := Experiment{
 			Hostname:        hostname,
@@ -196,6 +261,7 @@ func benchmarkClient(c *cli.Context) {
 			Key:             key,
 			TargetPublicKey: pkOfTarget,
 			Target:          chosenTarget,
+			Proxy:           chosenProxy,
 			STime:           time.Now(),
 		}
 
@@ -209,5 +275,5 @@ func benchmarkClient(c *cli.Context) {
 	log.Printf("Time to perform [%v] workflow tasks : [%v]", len(hostnames), totalResponse.Milliseconds())
 
 	log.Printf("Collected [%v] Responses.", len(responses))
-	telemetryState.streamDataToElastic(responses)
+	//telemetryState.streamDataToElastic(responses)
 }

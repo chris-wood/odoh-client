@@ -108,6 +108,7 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 
 	if err != nil {
 		log.Printf("Unable to Unmarshal the Encrypted ODOH Response")
+		return nil, err
 	}
 
 	return odohQueryResponse, nil
