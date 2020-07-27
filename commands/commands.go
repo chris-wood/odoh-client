@@ -74,6 +74,10 @@ var Commands = []cli.Command{
 				Name: "pick",
 				Value: 10,
 			},
+			cli.Uint64Flag{
+				Name: "numclients",
+				Value: 10,
+			},
 		},
 	},
 }

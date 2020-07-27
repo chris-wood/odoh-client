@@ -26,7 +26,8 @@ response from the Oblivious Target.
 | Target Server | odoh-target-dot-odoh-target.wm.r.appspot.com   | &check; | GCP Go Target  |
 | Proxy Server  | odoh-proxy-dot-odoh-target.wm.r.appspot.com    | &check; | GCP Go Proxy   |
 | Target Server | odoh-target-rs.crypto-team.workers.dev         | &check; | CF Rust Target |
-| Proxy Server  | odoh-rs-proxy.crypto-team.workers.dev          | &check; | CF Rust Proxy  |
+| Proxy Server  | alpha-odoh-rs-proxy.research.cloudflare.com    | &check; | CF Rust Proxy  |
+| Discovery     | odoh-discovery.crypto-team.workers.dev         | &check; | CF Discovery   |
 
 ### Experiments
 
@@ -34,7 +35,7 @@ response from the Oblivious Target.
 |---------------|----------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | GCP Go Proxy  | GCP Go Target  | &check;      | `odoh-client odoh --domain www.github.com. --dnstype AAAA --target odoh-target-dot-odoh-target.wm.r.appspot.com --proxy odoh-proxy-dot-odoh-target.wm.r.appspot.com` |
 | GCP Go Proxy  | CF Rust Target | &check;      | `odoh-client odoh --domain www.github.com. --dnstype AAAA --target odoh-target-rs.crypto-team.workers.dev --proxy odoh-proxy-dot-odoh-target.wm.r.appspot.com`       |
-| CF Rust Proxy | CF Rust Target | &cross;      | `odoh-client odoh --domain www.github.com. --dnstype AAAA --target odoh-target-rs.crypto-team.workers.dev --proxy odoh-rs-proxy.crypto-team.workers.dev`             |
+| CF Rust Proxy | CF Rust Target | &cross;      | `odoh-client odoh --domain www.github.com. --dnstype AAAA --target odoh-target-rs.crypto-team.workers.dev --proxy alpha-odoh-rs-proxy.research.cloudflare.com`       |
 | CF Rust Proxy | GCP Go Target  | &check;      | `odoh-client odoh --domain www.github.com. --dnstype AAAA --target odoh-target-dot-odoh-target.wm.r.appspot.com --proxy odoh-rs-proxy.crypto-team.workers.dev`       |
 
 Note: The CF Worker &rightarrow; CF Worker communication will NOT work and is by design from Cloudflare Workers. The 

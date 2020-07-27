@@ -202,6 +202,7 @@ func benchmarkClient(c *cli.Context) {
 	// The Preparation Phase of the request.
 	filepath := c.String("data")
 	filterCount := c.Uint64("pick")
+	numberOfParallelClients := c.Uint64("numclients")
 	all_domains, err := readLines(filepath)
 
 	if err != nil {
@@ -212,7 +213,7 @@ func benchmarkClient(c *cli.Context) {
 	log.Printf("Now operating on a total size of : [%v] hostnames", len(hostnames))
 
 	// Create a base state of the experiment
-	state := GetInstance()
+	state := GetInstance(numberOfParallelClients)
 	telemetryState := getTelemetryInstance()
 	telemetryResponse := telemetryState.getClusterInformation()
 	log.Printf("Server: %s", telemetryResponse["version"].(map[string]interface{})["number"])
@@ -221,13 +222,11 @@ func benchmarkClient(c *cli.Context) {
 	const dnsMessageType = dns.TypeA
 
 	// Obtain all the keys for the targets.
-	//targets := []string{"odoh-target-dot-odoh-Target.wm.r.appspot.com", "odoh-target-rs.crypto-team.workers.dev"}
-	targets := []string{"odoh-target-dot-odoh-target.wm.r.appspot.com"}
-	proxies := []string{"odoh-rs-proxy.crypto-team.workers.dev", "odoh-proxy-dot-odoh-target.wm.r.appspot.com"}
-	//targets := []string{"localhost:8080", "localhost:8787"}
+	targets := []string{"odoh-target-dot-odoh-target.wm.r.appspot.com", "odoh-target-rs.crypto-team.workers.dev"}
+	proxies := []string{"odoh-proxy-dot-odoh-target.wm.r.appspot.com", "alpha-odoh-rs-proxy.research.cloudflare.com"}
 	// TODO(@sudheesh): Discover the targets from a service.
 	for _, target := range targets {
-		pkbytes, err := RetrievePublicKey(target, state.client)
+		pkbytes, err := RetrievePublicKey(target, instance.client[0])
 		if err != nil {
 			log.Fatalf("Unable to obtain the public Key from %v. Error %v", target, err)
 		}
@@ -246,14 +245,13 @@ func benchmarkClient(c *cli.Context) {
 	for index := 0; index < len(hostnames); index++ {
 		hostname := hostnames[index]
 		key := symmetricKeys[index]
+		clientUsed := state.client[(index % int(numberOfParallelClients))]
+		log.Printf("Choosing [Client %v] to make a query", index % int(numberOfParallelClients))
 		chosenTarget := targets[mathrand.Intn(keysAvailable)]
 		chosenProxy  := proxies[mathrand.Intn(len(proxies))]
 		pkOfTarget, err := state.GetPublicKey(chosenTarget)
 		if err != nil {
 			log.Fatalf("Unable to retrieve the PK requested")
-		}
-		if index % 2  == 0 {
-			chosenProxy = ""
 		}
 		e := Experiment{
 			Hostname:        hostname,
@@ -266,7 +264,7 @@ func benchmarkClient(c *cli.Context) {
 		}
 
 		log.Printf("Request %v\n", index)
-		go workflow(e, state.client, responseChannel)
+		go workflow(e, clientUsed, responseChannel)
 	}
 	responses := responseHandler(len(hostnames), responseChannel)
 	close(responseChannel)
