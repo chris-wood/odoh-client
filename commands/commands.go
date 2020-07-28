@@ -82,6 +82,10 @@ var Commands = []cli.Command{
 				Name: "rate", // We default to the rate per minute. Please provide this rate in req/min to make.
 				Value: 15,
 			},
+			cli.StringFlag{
+				Name: "out",
+				Value: "data/data-test.txt",
+			},
 		},
 	},
 }

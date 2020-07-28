@@ -202,7 +202,8 @@ The benchmarkClient creates `--numclients` client instances performing `--pick` 
 uniformly distributed.
  */
 func benchmarkClient(c *cli.Context) {
-	f, err := os.OpenFile("data/data-test.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	outputFilePath := c.String("out")
+	f, err := os.OpenFile(outputFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("Unable to create a log file to log data into.")
 	}
