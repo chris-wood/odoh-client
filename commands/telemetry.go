@@ -19,7 +19,6 @@ type telemetry struct {
 const (
 	INDEX = "telemetry"
 	TYPE = "client_localhost"
-
 )
 
 var telemetryInstance telemetry

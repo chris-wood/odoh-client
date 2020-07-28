@@ -191,6 +191,16 @@ func responseHandler(numberOfChannels int, responseChannel chan Experiment) []st
 	return responses
 }
 
+func getTickTriggerTiming(requestsPerMinute int) float64 {
+	intervalDuration := time.Minute.Seconds() / float64(requestsPerMinute)
+	return intervalDuration
+}
+
+
+/*
+The benchmarkClient creates `--numclients` client instances performing `--pick` queries over `--rate` requests/minute
+uniformly distributed.
+ */
 func benchmarkClient(c *cli.Context) {
 	f, err := os.OpenFile("data/data-test.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -203,6 +213,11 @@ func benchmarkClient(c *cli.Context) {
 	filepath := c.String("data")
 	filterCount := c.Uint64("pick")
 	numberOfParallelClients := c.Uint64("numclients")
+	requestPerMinute := c.Uint64("rate")  // requests/minute
+	tickTrigger := getTickTriggerTiming(int(requestPerMinute))
+
+	totalResponsesNeeded := numberOfParallelClients * filterCount
+
 	all_domains, err := readLines(filepath)
 
 	if err != nil {
@@ -241,37 +256,62 @@ func benchmarkClient(c *cli.Context) {
 	log.Printf("%v symmetric keys chosen", len(symmetricKeys))
 
 	start := time.Now()
-	responseChannel := make(chan Experiment, len(hostnames))
-	for index := 0; index < len(hostnames); index++ {
-		hostname := hostnames[index]
-		key := symmetricKeys[index]
-		clientUsed := state.client[(index % int(numberOfParallelClients))]
-		log.Printf("Choosing [Client %v] to make a query", index % int(numberOfParallelClients))
-		chosenTarget := targets[mathrand.Intn(keysAvailable)]
-		chosenProxy  := proxies[mathrand.Intn(len(proxies))]
-		pkOfTarget, err := state.GetPublicKey(chosenTarget)
-		if err != nil {
-			log.Fatalf("Unable to retrieve the PK requested")
-		}
-		e := Experiment{
-			Hostname:        hostname,
-			DnsType:         dnsMessageType,
-			Key:             key,
-			TargetPublicKey: pkOfTarget,
-			Target:          chosenTarget,
-			Proxy:           chosenProxy,
-			STime:           time.Now(),
-		}
+	responseChannel := make(chan Experiment, totalResponsesNeeded)
 
-		log.Printf("Request %v\n", index)
-		go workflow(e, clientUsed, responseChannel)
+	totalQueries := len(hostnames)
+	log.Printf("Tick Trigger : %v %v", tickTrigger, time.Duration(tickTrigger) * time.Minute)
+
+	requestPerMinuteTick := time.NewTicker(time.Duration(tickTrigger) * time.Second)
+
+	// TODO(@sudheesh): Ideally start all the clients at different durations before they enforce --rate.
+
+	for now := range requestPerMinuteTick.C {
+		log.Printf("[%v] Firing %v requests at %v\n", totalQueries, requestPerMinute, now)
+		startIndex := totalQueries - 1
+		endIndex := startIndex - int(requestPerMinute)
+		if endIndex < 0 {
+			endIndex = 0
+		}
+		for index := startIndex; index >= endIndex; index-- {
+			for clientIndex := 0; clientIndex < int(numberOfParallelClients); clientIndex++ {
+				hostname := hostnames[index]
+				key := symmetricKeys[index]
+				clientUsed := state.client[clientIndex]
+				log.Printf("Choosing [Client %v] to make a query", index % int(numberOfParallelClients))
+				chosenTarget := targets[mathrand.Intn(keysAvailable)]
+				chosenProxy  := proxies[mathrand.Intn(len(proxies))]
+				pkOfTarget, err := state.GetPublicKey(chosenTarget)
+				if err != nil {
+					log.Fatalf("Unable to retrieve the PK requested")
+				}
+				e := Experiment{
+					Hostname:        hostname,
+					DnsType:         dnsMessageType,
+					Key:             key,
+					TargetPublicKey: pkOfTarget,
+					Target:          chosenTarget,
+					Proxy:           chosenProxy,
+					STime:           time.Now(),
+				}
+
+				log.Printf("Request %v%v\n", index, clientIndex)
+				go workflow(e, clientUsed, responseChannel)
+			}
+			totalQueries--
+		}
+		if totalQueries <= 0 {
+			log.Printf("Breaking out of the request per minute loop.")
+			requestPerMinuteTick.Stop()
+			break
+		}
 	}
-	responses := responseHandler(len(hostnames), responseChannel)
+	log.Printf("Reached here and triggering the responseHandler.\n")
+	responses := responseHandler(int(totalResponsesNeeded), responseChannel)
 	close(responseChannel)
 
 	totalResponse := time.Since(start)
 	log.Printf("Time to perform [%v] workflow tasks : [%v]", len(hostnames), totalResponse.Milliseconds())
 
 	log.Printf("Collected [%v] Responses.", len(responses))
-	//telemetryState.streamDataToElastic(responses)
+	telemetryState.streamDataToElastic(responses)
 }
