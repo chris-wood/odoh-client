@@ -86,6 +86,10 @@ var Commands = []cli.Command{
 				Name: "out",
 				Value: "data/data-test.txt",
 			},
+			cli.StringFlag{
+				Name: "discovery",
+				Value: "odoh-discovery.crypto-team.workers.dev",
+			},
 		},
 	},
 }

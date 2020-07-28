@@ -62,6 +62,11 @@ func (e *Experiment) serialize() string {
 	return string(response)
 }
 
+type DiscoveryServiceResponse struct {
+	Proxies []string `json:"proxies"`
+	Targets []string `json:"targets"`
+}
+
 func prepareSymmetricKeys(quantity int) [][]byte {
 	// Assume that all the keys necessary for the experiment are 16 bytes.
 	result := make([][]byte, quantity)
@@ -215,6 +220,7 @@ func benchmarkClient(c *cli.Context) {
 	filterCount := c.Uint64("pick")
 	numberOfParallelClients := c.Uint64("numclients")
 	requestPerMinute := c.Uint64("rate")  // requests/minute
+	discoveryServiceHostname := c.String("discovery")
 	tickTrigger := getTickTriggerTiming(int(requestPerMinute))
 
 	totalResponsesNeeded := numberOfParallelClients * filterCount
@@ -237,9 +243,14 @@ func benchmarkClient(c *cli.Context) {
 	// Create network requests concurrently.
 	const dnsMessageType = dns.TypeA
 
+	availableServices, err := DiscoverProxiesAndTargets(discoveryServiceHostname, instance.client[0])
+	if err != nil {
+		log.Fatalf("Unable to discover the services available.")
+	}
+
 	// Obtain all the keys for the targets.
-	targets := []string{"odoh-target-dot-odoh-target.wm.r.appspot.com", "odoh-target-rs.crypto-team.workers.dev"}
-	proxies := []string{"odoh-proxy-dot-odoh-target.wm.r.appspot.com", "alpha-odoh-rs-proxy.research.cloudflare.com"}
+	targets := availableServices.Targets
+	proxies := availableServices.Proxies
 	// TODO(@sudheesh): Discover the targets from a service.
 	for _, target := range targets {
 		pkbytes, err := RetrievePublicKey(target, instance.client[0])
@@ -251,6 +262,7 @@ func benchmarkClient(c *cli.Context) {
 
 	keysAvailable := state.TotalNumberOfTargets()
 	log.Printf("%v targets available to choose from.", keysAvailable)
+	log.Printf("%v proxies available to choose from.", len(proxies))
 
 	// Part 1 : Initialize and Prepare the Keys to the request.
 	symmetricKeys := prepareSymmetricKeys(len(hostnames))

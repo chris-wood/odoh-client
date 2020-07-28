@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/chris-wood/dns"
@@ -112,6 +113,26 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 	}
 
 	return odohQueryResponse, nil
+}
+
+func DiscoverProxiesAndTargets(hostname string, client *http.Client) (response DiscoveryServiceResponse, err error) {
+	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE + "://" + hostname, nil)
+	if err != nil {
+		log.Fatalf("Unable to discover the proxies and targets")
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("Unable to obtain a response from the discovery service")
+	}
+	defer resp.Body.Close()
+
+	var data DiscoveryServiceResponse
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&data)
+	if err != nil {
+		log.Fatalf("Unable to decode the obtained JSON response from the Discovery service %v\n", err)
+	}
+	return data, nil
 }
 
 func RetrievePublicKey(ip string, clientProvided *http.Client) (response odoh.ObliviousDNSPublicKey, err error) {
