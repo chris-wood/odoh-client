@@ -39,6 +39,19 @@ type experiment struct {
 	DnsType         uint16
 	Key             []byte
 	TargetPublicKey odoh.ObliviousDNSPublicKey
+	// Instrumentation
+	Proxy       string
+	Target      string
+	// Timing parameters
+	STime time.Time
+	IngestedFrom string
+}
+
+type experimentResult struct {
+	Hostname        string
+	DnsType         uint16
+	Key             []byte
+	TargetPublicKey odoh.ObliviousDNSPublicKey
 	// Timing parameters
 	STime time.Time
 	ETime time.Time
@@ -54,7 +67,7 @@ type experiment struct {
 	IngestedFrom string
 }
 
-func (e *experiment) serialize() string {
+func (e *experimentResult) serialize() string {
 	exp := &e
 	response, err := json.Marshal(exp)
 	if err != nil {
@@ -84,7 +97,7 @@ func prepareSymmetricKeys(quantity int) [][]byte {
 	return result
 }
 
-func (e *experiment) run(client *http.Client, channel chan experiment) {
+func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 	hostname := e.Hostname
 	dnsType := e.DnsType
 	symmetricKey := e.Key
@@ -119,7 +132,7 @@ func (e *experiment) run(client *http.Client, channel chan experiment) {
 	rt.ClientDownstreamResponseTime = responseTime
 
 	if err != nil || odohMessage == nil {
-		exp := experiment{
+		exp := experimentResult{
 			Hostname:        hostname,
 			DnsType:         dnsType,
 			Key:             symmetricKey,
@@ -158,7 +171,7 @@ func (e *experiment) run(client *http.Client, channel chan experiment) {
 	log.Printf("====================================")
 	var requestIDString []byte = requestId[:]
 	log.Printf("Requested ID : [%s]", hex.EncodeToString(requestIDString))
-	exp := experiment{
+	exp := experimentResult{
 		Hostname:        hostname,
 		DnsType:         dnsType,
 		Key:             symmetricKey,
@@ -181,7 +194,7 @@ func (e *experiment) run(client *http.Client, channel chan experiment) {
 	channel <- exp
 }
 
-func responseHandler(numberOfChannels int, responseChannel chan experiment) []string {
+func responseHandler(numberOfChannels int, responseChannel chan experimentResult) []string {
 	responses := make([]string, 0)
 	for index := 0; index < numberOfChannels; index++ {
 		answerStructure := <-responseChannel
@@ -279,7 +292,7 @@ func benchmarkClient(c *cli.Context) {
 	log.Printf("%v symmetric keys chosen", len(symmetricKeys))
 
 	start := time.Now()
-	responseChannel := make(chan experiment, totalResponsesNeeded)
+	responseChannel := make(chan experimentResult, totalResponsesNeeded)
 
 	totalQueries := len(hostnames)
 	log.Printf("Tick Trigger : %v %v", tickTrigger, time.Duration(tickTrigger) * time.Minute)
