@@ -84,7 +84,7 @@ func prepareSymmetricKeys(quantity int) [][]byte {
 	return result
 }
 
-func workflow(e experiment, client *http.Client, channel chan experiment) {
+func (e *experiment) run(client *http.Client, channel chan experiment) {
 	hostname := e.Hostname
 	dnsType := e.DnsType
 	symmetricKey := e.Key
@@ -319,7 +319,7 @@ func benchmarkClient(c *cli.Context) {
 				}
 
 				log.Printf("Request %v%v\n", index, clientIndex)
-				go workflow(e, clientUsed, responseChannel)
+				go e.run(clientUsed, responseChannel)
 			}
 			totalQueries--
 		}
