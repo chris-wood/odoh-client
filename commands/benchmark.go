@@ -51,6 +51,7 @@ type Experiment struct {
 	Timestamp   RunningTime
 	// Experiment status
 	Status bool
+	IngestedFrom string
 }
 
 func (e *Experiment) serialize() string {
@@ -130,6 +131,7 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 			DnsAnswer:       []byte(err.Error()),
 			Status:          false,
 			Timestamp:       rt,
+			IngestedFrom:    e.IngestedFrom,
 		}
 		channel <- exp
 		return
@@ -173,6 +175,7 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 		Timestamp:   rt,
 		// Experiment status
 		Status: true,
+		IngestedFrom: e.IngestedFrom,
 	}
 	log.Printf("Experiment : %v", exp.serialize())
 	channel <- exp
@@ -207,6 +210,13 @@ The benchmarkClient creates `--numclients` client instances performing `--pick` 
 uniformly distributed.
  */
 func benchmarkClient(c *cli.Context) {
+	var clientInstanceName string
+	if clientInstanceEnvironmentName := os.Getenv("CLIENT_INSTANCE_NAME"); clientInstanceEnvironmentName != "" {
+		clientInstanceName = clientInstanceEnvironmentName
+	} else {
+		clientInstanceName = "client_localhost_instance"
+	}
+
 	outputFilePath := c.String("out")
 	f, err := os.OpenFile(outputFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -305,6 +315,7 @@ func benchmarkClient(c *cli.Context) {
 					Target:          chosenTarget,
 					Proxy:           chosenProxy,
 					STime:           time.Now(),
+					IngestedFrom:    clientInstanceName,
 				}
 
 				log.Printf("Request %v%v\n", index, clientIndex)
@@ -326,5 +337,6 @@ func benchmarkClient(c *cli.Context) {
 	log.Printf("Time to perform [%v] workflow tasks : [%v]", len(hostnames), totalResponse.Milliseconds())
 
 	log.Printf("Collected [%v] Responses.", len(responses))
-	telemetryState.streamDataToElastic(responses)
+	telemetryState.streamTelemetryToGCPLogging(responses)
+	//telemetryState.streamDataToElastic(responses)
 }
