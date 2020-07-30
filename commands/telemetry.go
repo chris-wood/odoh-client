@@ -50,7 +50,7 @@ func getTelemetryInstance() *telemetry {
 	return &telemetryInstance
 }
 
-func (t *telemetry) streamTelemetryToGCPLogging(dataItems []string) {
+func (t *telemetry) streamLogsToGCP(dataItems []string) {
 	defer t.cloudlogger.Flush()
 	for _, item := range dataItems {
 		log.Printf("Logging %v to the GCP instance\n", item)
@@ -74,7 +74,7 @@ func (t *telemetry) getClusterInformation() map[string]interface{} {
 	return r
 }
 
-func (t *telemetry) streamDataToElastic(dataItems []string) {
+func (t *telemetry) streamLogsToELK(dataItems []string) {
 	var wg sync.WaitGroup
 	for index, item := range dataItems {
 		wg.Add(1)

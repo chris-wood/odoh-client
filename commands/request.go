@@ -135,13 +135,12 @@ func DiscoverProxiesAndTargets(hostname string, client *http.Client) (response D
 	return data, nil
 }
 
-func RetrievePublicKey(ip string, clientProvided *http.Client) (response odoh.ObliviousDNSPublicKey, err error) {
+func RetrievePublicKey(ip string, client *http.Client) (odoh.ObliviousDNSPublicKey, error) {
 	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE + "://" + ip + "/pk", nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	client := clientProvided
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalln(err)
@@ -189,7 +188,7 @@ func obliviousDnsRequest(c *cli.Context) error {
 		useproxy = true
 	}
 
-	key := make([]byte, 16)
+	key := make([]byte, 16)  // Hardcoding these values for specifically AES_GCM128
 	_, err := rand.Read(key)
 	if err != nil {
 		log.Fatalf("Unable to read random bytes to make a symmetric key.\n")

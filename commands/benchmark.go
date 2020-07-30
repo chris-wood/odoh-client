@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// This RunningTime structure contains the epoch timestamps for each of the operations
+// This runningTime structure contains the epoch timestamps for each of the operations
 // taking place. The explanations are as follows:
 // 1. Start => Epoch time at which the client starts to prepare the question
 // 2. ClientHashingOverheadTime => Epoch time at which the client hashes the symmetric key used for request identification.
@@ -24,7 +24,7 @@ import (
 // 5. ClientDownstreamResponseTime => Epoch time indicating the receipt of the response and deserialization into ObliviousDNSMessage
 // 6. EndTime => Epoch time indicating the end of all tasks for the request.
 // NOTE: All timestamps are stored in NanoSecond granularity and need to be converted into microseconds (/1000.0) or milliseconds (/1000.0^2)
-type RunningTime struct {
+type runningTime struct {
 	Start                        int64
 	ClientHashingOverheadTime    int64
 	ClientQueryEncryptionTime    int64
@@ -34,7 +34,7 @@ type RunningTime struct {
 	EndTime                      int64
 }
 
-type Experiment struct {
+type experiment struct {
 	Hostname        string
 	DnsType         uint16
 	Key             []byte
@@ -48,13 +48,13 @@ type Experiment struct {
 	DnsAnswer   []byte
 	Proxy       string
 	Target      string
-	Timestamp   RunningTime
-	// Experiment status
+	Timestamp   runningTime
+	// experiment status
 	Status bool
 	IngestedFrom string
 }
 
-func (e *Experiment) serialize() string {
+func (e *experiment) serialize() string {
 	exp := &e
 	response, err := json.Marshal(exp)
 	if err != nil {
@@ -84,7 +84,7 @@ func prepareSymmetricKeys(quantity int) [][]byte {
 	return result
 }
 
-func workflow(e Experiment, client *http.Client, channel chan Experiment) {
+func workflow(e experiment, client *http.Client, channel chan experiment) {
 	hostname := e.Hostname
 	dnsType := e.DnsType
 	symmetricKey := e.Key
@@ -98,7 +98,7 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 		shouldUseProxy = true
 	}
 
-	rt := RunningTime{}
+	rt := runningTime{}
 
 	start := time.Now()
 	rt.Start = start.UnixNano()
@@ -119,7 +119,7 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 	rt.ClientDownstreamResponseTime = responseTime
 
 	if err != nil || odohMessage == nil {
-		exp := Experiment{
+		exp := experiment{
 			Hostname:        hostname,
 			DnsType:         dnsType,
 			Key:             symmetricKey,
@@ -158,7 +158,7 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 	log.Printf("====================================")
 	var requestIDString []byte = requestId[:]
 	log.Printf("Requested ID : [%s]", hex.EncodeToString(requestIDString))
-	exp := Experiment{
+	exp := experiment{
 		Hostname:        hostname,
 		DnsType:         dnsType,
 		Key:             symmetricKey,
@@ -173,15 +173,15 @@ func workflow(e Experiment, client *http.Client, channel chan Experiment) {
 		Proxy:       proxy,
 		Target:      target,
 		Timestamp:   rt,
-		// Experiment status
+		// experiment status
 		Status: true,
 		IngestedFrom: e.IngestedFrom,
 	}
-	log.Printf("Experiment : %v", exp.serialize())
+	log.Printf("experiment : %v", exp.serialize())
 	channel <- exp
 }
 
-func responseHandler(numberOfChannels int, responseChannel chan Experiment) []string {
+func responseHandler(numberOfChannels int, responseChannel chan experiment) []string {
 	responses := make([]string, 0)
 	for index := 0; index < numberOfChannels; index++ {
 		answerStructure := <-responseChannel
@@ -235,13 +235,13 @@ func benchmarkClient(c *cli.Context) {
 
 	totalResponsesNeeded := numberOfParallelClients * filterCount
 
-	all_domains, err := readLines(filepath)
+	allDomains, err := readLines(filepath)
 
 	if err != nil {
 		log.Printf("Failed to read the file correctly. %v", err)
 	}
 
-	hostnames := shuffleAndSlice(all_domains, filterCount)
+	hostnames := shuffleAndSlice(allDomains, filterCount)
 	log.Printf("Now operating on a total size of : [%v] hostnames", len(hostnames))
 
 	// Create a base state of the experiment
@@ -279,7 +279,7 @@ func benchmarkClient(c *cli.Context) {
 	log.Printf("%v symmetric keys chosen", len(symmetricKeys))
 
 	start := time.Now()
-	responseChannel := make(chan Experiment, totalResponsesNeeded)
+	responseChannel := make(chan experiment, totalResponsesNeeded)
 
 	totalQueries := len(hostnames)
 	log.Printf("Tick Trigger : %v %v", tickTrigger, time.Duration(tickTrigger) * time.Minute)
@@ -307,7 +307,7 @@ func benchmarkClient(c *cli.Context) {
 				if err != nil {
 					log.Fatalf("Unable to retrieve the PK requested")
 				}
-				e := Experiment{
+				e := experiment{
 					Hostname:        hostname,
 					DnsType:         dnsMessageType,
 					Key:             key,
@@ -337,6 +337,6 @@ func benchmarkClient(c *cli.Context) {
 	log.Printf("Time to perform [%v] workflow tasks : [%v]", len(hostnames), totalResponse.Milliseconds())
 
 	log.Printf("Collected [%v] Responses.", len(responses))
-	telemetryState.streamTelemetryToGCPLogging(responses)
-	//telemetryState.streamDataToElastic(responses)
+	telemetryState.streamLogsToGCP(responses)
+	//telemetryState.streamLogsToELK(responses)
 }
