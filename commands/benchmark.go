@@ -43,7 +43,6 @@ type experiment struct {
 	Proxy       string
 	Target      string
 	// Timing parameters
-	STime time.Time
 	IngestedFrom string
 }
 
@@ -139,7 +138,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 			TargetPublicKey: targetPublicKey,
 			Target:          target,
 			Proxy:           proxy,
-			STime:           e.STime,
+			STime:           start,
 			ETime:           time.Now(),
 			DnsAnswer:       []byte(err.Error()),
 			Status:          false,
@@ -177,7 +176,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		Key:             symmetricKey,
 		TargetPublicKey: targetPublicKey,
 		// Overall timing parameters
-		STime: e.STime,
+		STime: start,
 		ETime: time.Now(),
 		// Instrumentation
 		RequestID:   hex.EncodeToString(requestIDString),
@@ -327,7 +326,6 @@ func benchmarkClient(c *cli.Context) {
 					TargetPublicKey: pkOfTarget,
 					Target:          chosenTarget,
 					Proxy:           chosenProxy,
-					STime:           time.Now(),
 					IngestedFrom:    clientInstanceName,
 				}
 

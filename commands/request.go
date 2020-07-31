@@ -182,7 +182,7 @@ func obliviousDnsRequest(c *cli.Context) error {
 	targetIP := c.String("target")
 	proxy := c.String("proxy")
 
-	var useproxy bool;
+	var useproxy bool
 	if len(proxy) > 0 {
 		fmt.Println("Using proxy since proxy is specified.")
 		useproxy = true
