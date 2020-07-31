@@ -159,7 +159,26 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 	dnsAnswer, err := validateEncryptedResponse(odohMessage, symmetricKey)
 	validationTime := time.Now().UnixNano()
 	rt.ClientAnswerDecryptionTime = validationTime
-	log.Printf("[DNS ANSWER] %v %v %v\n", dnsAnswer, odohMessage, symmetricKey)
+	if err != nil || dnsAnswer == nil {
+		exp := experimentResult{
+			Hostname:        hostname,
+			DnsType:         dnsType,
+			Key:             symmetricKey,
+			TargetPublicKey: targetPublicKey,
+			Target:          target,
+			Proxy:           proxy,
+			STime:           start,
+			ETime:           time.Now(),
+			DnsAnswer:       []byte("dnsAnswer incorrectly and unable to Pack"),
+			Status:          false,
+			Timestamp:       rt,
+			IngestedFrom:    e.IngestedFrom,
+			ProtocolType:    "ODOH",
+			ExperimentID:    expId,
+		}
+		channel <- exp
+		return
+	}
 	dnsAnswerBytes, err := dnsAnswer.Pack()
 	endTime := time.Now().UnixNano()
 	rt.EndTime = endTime
