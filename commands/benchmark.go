@@ -383,4 +383,6 @@ func benchmarkClient(c *cli.Context) {
 	log.Printf("Collected [%v] Responses.", len(responses))
 	telemetryState.streamLogsToGCP(responses)
 	//telemetryState.streamLogsToELK(responses)
+
+	telemetryState.tearDown()
 }

@@ -58,6 +58,13 @@ func (t *telemetry) streamLogsToGCP(dataItems []string) {
 	}
 }
 
+func (t *telemetry) tearDown() {
+	err := t.logClient.Close()
+	if err != nil {
+		log.Printf("Unable to close the client connection to logging")
+	}
+}
+
 func (t *telemetry) getClusterInformation() map[string]interface{} {
 	var r map[string]interface{}
 	res, err := t.esClient.Info()
