@@ -272,8 +272,8 @@ func benchmarkClient(c *cli.Context) {
 	// Create a base state of the experiment
 	state := GetInstance(numberOfParallelClients)
 	telemetryState := getTelemetryInstance()
-	telemetryResponse := telemetryState.getClusterInformation()
-	log.Printf("Server: %s", telemetryResponse["version"].(map[string]interface{})["number"])
+	//telemetryResponse := telemetryState.getClusterInformation()
+	//log.Printf("Server: %s", telemetryResponse["version"].(map[string]interface{})["number"])
 
 	// Create network requests concurrently.
 	const dnsMessageType = dns.TypeA
