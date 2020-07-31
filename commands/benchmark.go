@@ -35,6 +35,7 @@ type runningTime struct {
 }
 
 type experiment struct {
+	ExperimentID    string
 	Hostname        string
 	DnsType         uint16
 	Key             []byte
@@ -64,6 +65,8 @@ type experimentResult struct {
 	// experiment status
 	Status bool
 	IngestedFrom string
+	ProtocolType string
+	ExperimentID string
 }
 
 func (e *experimentResult) serialize() string {
@@ -103,6 +106,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 	targetPublicKey := e.TargetPublicKey
 	proxy := e.Proxy
 	target := e.Target
+	expId := e.ExperimentID
 
 	shouldUseProxy := false
 
@@ -144,6 +148,8 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 			Status:          false,
 			Timestamp:       rt,
 			IngestedFrom:    e.IngestedFrom,
+			ProtocolType:    "ODOH",
+			ExperimentID:    expId,
 		}
 		channel <- exp
 		return
@@ -188,6 +194,8 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		// experiment status
 		Status: true,
 		IngestedFrom: e.IngestedFrom,
+		ProtocolType: "ODOH",
+		ExperimentID: expId,
 	}
 	log.Printf("experiment : %v", exp.serialize())
 	channel <- exp
@@ -227,6 +235,11 @@ func benchmarkClient(c *cli.Context) {
 		clientInstanceName = clientInstanceEnvironmentName
 	} else {
 		clientInstanceName = "client_localhost_instance"
+	}
+
+	var experimentID string
+	if experimentID := os.Getenv("EXPERIMENT_ID"); experimentID == "" {
+		experimentID = "EXP_LOCAL"
 	}
 
 	outputFilePath := c.String("out")
@@ -320,6 +333,7 @@ func benchmarkClient(c *cli.Context) {
 					log.Fatalf("Unable to retrieve the PK requested")
 				}
 				e := experiment{
+					ExperimentID:    experimentID,
 					Hostname:        hostname,
 					DnsType:         dnsMessageType,
 					Key:             key,
