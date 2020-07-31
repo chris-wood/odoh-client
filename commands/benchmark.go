@@ -159,7 +159,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 	dnsAnswer, err := validateEncryptedResponse(odohMessage, symmetricKey)
 	validationTime := time.Now().UnixNano()
 	rt.ClientAnswerDecryptionTime = validationTime
-
+	log.Printf("[DNS ANSWER] %v %v %v\n", dnsAnswer, odohMessage, symmetricKey)
 	dnsAnswerBytes, err := dnsAnswer.Pack()
 	endTime := time.Now().UnixNano()
 	rt.EndTime = endTime
