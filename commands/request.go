@@ -2,8 +2,11 @@ package commands
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/chris-wood/dns"
 	"github.com/chris-wood/odoh"
@@ -17,7 +20,8 @@ import (
 
 const (
 	OBLIVIOUS_DOH = "application/oblivious-dns-message"
-	HTTP_MODE = "https"
+	TARGET_HTTP_MODE = "https"
+	PROXY_HTTP_MODE = "https"
 )
 
 func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte) (response *dns.Msg, err error) {
@@ -54,11 +58,11 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 
 	if useProxy != true {
 		fmt.Printf("Preparing the query to dns-query endpoint with %v data\n.", serializedBody)
-		baseurl = fmt.Sprintf("%s://%s/%s", HTTP_MODE, targetIP, "dns-query")
+		baseurl = fmt.Sprintf("%s://%s/%s", TARGET_HTTP_MODE, targetIP, "dns-query")
 		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 	} else {
-		baseurl = fmt.Sprintf("%s://%s/%s", HTTP_MODE, proxy, "proxy")
+		baseurl = fmt.Sprintf("%s://%s/%s", PROXY_HTTP_MODE, proxy, "proxy")
 		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 		queries.Add("targethost", targetIP)
@@ -71,8 +75,7 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 	return req, err
 }
 
-func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool, targetIP string, proxy string) (response *odoh.ObliviousDNSMessage, err error) {
-	client := http.Client{}
+func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool, targetIP string, proxy string, client *http.Client) (response *odoh.ObliviousDNSMessage, err error) {
 	req, err := prepareHttpRequest(serializedOdohDnsQueryString, useProxy, targetIP, proxy)
 
 	if err != nil {
@@ -85,15 +88,18 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 	}
 
 	responseHeader := resp.Header.Get("Content-Type")
-	if responseHeader != OBLIVIOUS_DOH {
-		log.Fatalf("[WARN] The returned response does not have the %v Content-Type\n", OBLIVIOUS_DOH)
-		// TODO: Design decision, break here.
-	}
-
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Failed to read response body.")
+		log.Println("Failed to read response body.")
 		log.Fatalln(err)
+	}
+	if responseHeader != OBLIVIOUS_DOH {
+		log.Printf("[WARN] The returned response does not have the %v Content-Type from %v with response %v\n", OBLIVIOUS_DOH, targetIP, string(bodyBytes))
+		return &odoh.ObliviousDNSMessage{
+			MessageType:      odoh.ResponseType,
+			KeyID:            []byte{},
+			EncryptedMessage: []byte{},
+		}, errors.New(fmt.Sprintf("Did not obtain the correct headers from %v with response %v", targetIP, string(bodyBytes)))
 	}
 
 	hexBodyBytes := hex.EncodeToString(bodyBytes)
@@ -102,19 +108,39 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 	odohQueryResponse, err := odoh.UnmarshalDNSMessage(bodyBytes)
 
 	if err != nil {
-		log.Fatalln("Unable to Unmarshal the Encrypted ODOH Response")
+		log.Printf("Unable to Unmarshal the Encrypted ODOH Response")
+		return nil, err
 	}
 
 	return odohQueryResponse, nil
 }
 
-func retrievePublicKey(ip string) (response odoh.ObliviousDNSPublicKey, err error) {
-	req, err := http.NewRequest(http.MethodGet, HTTP_MODE + "://" + ip + "/pk", nil)
+func DiscoverProxiesAndTargets(hostname string, client *http.Client) (response DiscoveryServiceResponse, err error) {
+	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE + "://" + hostname, nil)
+	if err != nil {
+		log.Fatalf("Unable to discover the proxies and targets")
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("Unable to obtain a response from the discovery service")
+	}
+	defer resp.Body.Close()
+
+	var data DiscoveryServiceResponse
+	decoder := json.NewDecoder(resp.Body)
+	err = decoder.Decode(&data)
+	if err != nil {
+		log.Fatalf("Unable to decode the obtained JSON response from the Discovery service %v\n", err)
+	}
+	return data, nil
+}
+
+func RetrievePublicKey(ip string, client *http.Client) (odoh.ObliviousDNSPublicKey, error) {
+	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE + "://" + ip + "/pk", nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalln(err)
@@ -153,21 +179,27 @@ func plainDnsRequest(c *cli.Context) error {
 func obliviousDnsRequest(c *cli.Context) error {
 	domainName := c.String("domain")
 	dnsTypeString := c.String("dnstype")
-	key := c.String("key")
 	targetIP := c.String("target")
 	proxy := c.String("proxy")
 
-	var useproxy bool;
+	var useproxy bool
 	if len(proxy) > 0 {
 		fmt.Println("Using proxy since proxy is specified.")
 		useproxy = true
 	}
 
+	key := make([]byte, 16)  // Hardcoding these values for specifically AES_GCM128
+	_, err := rand.Read(key)
+	if err != nil {
+		log.Fatalf("Unable to read random bytes to make a symmetric key.\n")
+	}
+
 	if useproxy == true {
 		fmt.Printf("Using %v as the proxy to send the ODOH Message\n", proxy)
 	}
+	client := http.Client{}
 
-	odohPublicKeyBytes, err := retrievePublicKey(targetIP)
+	odohPublicKeyBytes, err := RetrievePublicKey(targetIP, &client)
 
 	if err != nil {
 		fmt.Println("Failed to obtain the public key of the target resolver.", err)
@@ -180,23 +212,23 @@ func obliviousDnsRequest(c *cli.Context) error {
 
 	fmt.Println("[ODNS] Request : ", domainName, dnsTypeString, key)
 
-	serializedODoHQueryMessage, err := prepareOdohQuestion(domainName, dnsType, []byte(key), odohPublicKeyBytes)
+	serializedODoHQueryMessage, err := prepareOdohQuestion(domainName, dnsType, key, odohPublicKeyBytes)
 
 	if err != nil {
 		log.Fatalln("Unable to Create the ODoH Query with the DNS Question")
 	}
 
-	odohMessage, err := createOdohQueryResponse(serializedODoHQueryMessage, useproxy, targetIP, proxy)
+	odohMessage, err := createOdohQueryResponse(serializedODoHQueryMessage, useproxy, targetIP, proxy, &client)
 	if err != nil {
 		log.Fatalln("Unable to Obtain an Encrypted Response from the Target Resolver")
 	}
 
-	dnsResponse, err := ValidateEncryptedResponse(odohMessage, []byte(key))
+	dnsResponse, err := validateEncryptedResponse(odohMessage, key)
 	fmt.Println("[ODOH] Response : \n", dnsResponse)
 	return nil
 }
 
-func ValidateEncryptedResponse(message *odoh.ObliviousDNSMessage, key []byte) (response *dns.Msg, err error) {
+func validateEncryptedResponse(message *odoh.ObliviousDNSMessage, key []byte) (response *dns.Msg, err error) {
 	odohResponse := odoh.ObliviousDNSResponse{ResponseKey: key}
 
 	responseMessageType := message.MessageType
@@ -223,14 +255,14 @@ func ValidateEncryptedResponse(message *odoh.ObliviousDNSMessage, key []byte) (r
 	decryptedResponse, err := odohResponse.DecryptResponse(suite, aad, encryptedResponse)
 
 	if err != nil {
-		log.Fatalln("Unable to decrypt the obtained response using the symmetric key sent.")
+		log.Printf("Unable to decrypt the obtained response using the symmetric key sent.")
 	}
 
 	log.Printf("[ODOH] [Decrypted Response] : %v\n", decryptedResponse)
 
 	dnsBytes, err := parseDnsResponse(decryptedResponse)
 	if err != nil {
-		log.Fatalln("Unable to parse DNS bytes after decryption of the message from target server.")
+		log.Printf("Unable to parse DNS bytes after decryption of the message from target server.")
 		return nil, err
 	}
 
@@ -238,6 +270,7 @@ func ValidateEncryptedResponse(message *odoh.ObliviousDNSMessage, key []byte) (r
 }
 
 func getTargetPublicKey(c *cli.Context) error {
+	client := http.Client{}
 	targetIP := c.String("ip")
 	/*
 	Ideally, this procedure will be replaced by a DNSSEC validation step followed by the retrieval of the PublicKey
@@ -246,7 +279,7 @@ func getTargetPublicKey(c *cli.Context) error {
 	 */
 	fmt.Printf("Retrieving the Public Key from [%v]\n", targetIP)
 
-	odohPublicKeyBytes, _ := retrievePublicKey(targetIP)
+	odohPublicKeyBytes, _ := RetrievePublicKey(targetIP, &client)
 	fmt.Printf("[PK] Expectation : %v", odohPublicKeyBytes)
 	return nil
 }

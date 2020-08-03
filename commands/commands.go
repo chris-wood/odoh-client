@@ -45,11 +45,6 @@ var Commands = []cli.Command{
 				Usage: "Hostname:Port format declaration of the target resolver hostname",
 			},
 			cli.StringFlag{
-				Name: "key, k",
-				Value: "00000000000000000000000000000000",  // 16 bytes or 32 byte hex string
-				Usage: "Hex Encoded String containing the Symmetric Key which is used to return an Encrypted Response",
-			},
-			cli.StringFlag{
 				Name: "proxy, p",
 				Usage: "Hostname:Port format declaration of the proxy hostname",
 			},
@@ -63,6 +58,37 @@ var Commands = []cli.Command{
 			cli.StringFlag{
 				Name: "ip",
 				Value: "localhost:8080",
+			},
+		},
+	},
+	{
+		Name: "bench",
+		Usage: "Performs a benchmark for ODOH Target Resolver",
+		Action: benchmarkClient,
+		Flags: []cli.Flag {
+			cli.StringFlag{
+				Name: "data",
+				Value: "dataset.csv",
+			},
+			cli.Uint64Flag{
+				Name: "pick",
+				Value: 10,
+			},
+			cli.Uint64Flag{
+				Name: "numclients",
+				Value: 10,
+			},
+			cli.Uint64Flag{
+				Name: "rate", // We default to the rate per minute. Please provide this rate in req/min to make.
+				Value: 15,
+			},
+			cli.StringFlag{
+				Name: "out",
+				Value: "data/data-test.txt",
+			},
+			cli.StringFlag{
+				Name: "discovery",
+				Value: "odoh-discovery.crypto-team.workers.dev",
 			},
 		},
 	},

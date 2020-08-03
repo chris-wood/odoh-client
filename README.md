@@ -21,32 +21,22 @@ response from the Oblivious Target.
 
 ### Tests
 
-| GCP Instances | Link                                           | Active  |
-|---------------|------------------------------------------------|---------|
-| Target Server | odoh-target-dot-odoh-target.wm.r.appspot.com   | &check; |
-| Proxy Server  | odoh-proxy-dot-odoh-target.wm.r.appspot.com    | &check; |
+|  Instances    | Link                                           | Active  | Code           |
+|---------------|------------------------------------------------|---------|----------------|
+| Target Server | odoh-target-dot-odoh-target.wm.r.appspot.com   | &check; | GCP Go Target  |
+| Proxy Server  | odoh-proxy-dot-odoh-target.wm.r.appspot.com    | &check; | GCP Go Proxy   |
+| Target Server | odoh-target-rs.crypto-team.workers.dev         | &check; | CF Rust Target |
+| Proxy Server  | alpha-odoh-rs-proxy.research.cloudflare.com    | &check; | CF Rust Proxy  |
+| Discovery     | odoh-discovery.crypto-team.workers.dev         | &check; | CF Discovery   |
 
-#### DOH Query to target
+### Experiments
 
-```sh
-./odoh-client doh --domain www.apple.com. --target odoh-target-dot-odoh-target.wm.r.appspot.com --dnstype AAAA
-```
+| Proxied Via   | To Target      | Can Resolve? | CLI Call                                                                                                                                                               |
+|---------------|----------------|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| GCP Go Proxy  | GCP Go Target  | &check;      | `odoh-client odoh --domain www.github.com. --dnstype AAAA --target odoh-target-dot-odoh-target.wm.r.appspot.com --proxy odoh-proxy-dot-odoh-target.wm.r.appspot.com` |
+| GCP Go Proxy  | CF Rust Target | &check;      | `odoh-client odoh --domain www.github.com. --dnstype AAAA --target odoh-target-rs.crypto-team.workers.dev --proxy odoh-proxy-dot-odoh-target.wm.r.appspot.com`       |
+| CF Rust Proxy | CF Rust Target | &cross;      | `odoh-client odoh --domain www.github.com. --dnstype AAAA --target odoh-target-rs.crypto-team.workers.dev --proxy alpha-odoh-rs-proxy.research.cloudflare.com`       |
+| CF Rust Proxy | GCP Go Target  | &check;      | `odoh-client odoh --domain www.github.com. --dnstype AAAA --target odoh-target-dot-odoh-target.wm.r.appspot.com --proxy odoh-rs-proxy.crypto-team.workers.dev`       |
 
-
-#### ODOH Query to target
-
-```sh
-./odoh-client odoh --domain www.cloudflare.com. --dnstype AAAA --target odoh-target-dot-odoh-target.wm.r.appspot.com --key 01234567890123456789012345678912
-```
-
-#### ODOH Query to target via a proxy
-
-```sh
-./odoh-client odoh --domain www.cloudflare.com. --dnstype AAAA --target odoh-target-dot-odoh-target.wm.r.appspot.com --key 01234567890123456789012345678912 --proxy odoh-proxy-dot-odoh-target.wm.r.appspot.com
-```
-
-#### Get Public Key of a target
-
-```sh
-./odoh-client get-publickey --ip odoh-target-dot-odoh-target.wm.r.appspot.com
-```
+Note: The CF Worker &rightarrow; CF Worker communication will NOT work and is by design from Cloudflare Workers. The 
+usage of ODOH Rust Proxy and Target together however does work correctly if the workers are hosted on different zones. 
