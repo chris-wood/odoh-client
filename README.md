@@ -39,4 +39,11 @@ response from the Oblivious Target.
 | CF Rust Proxy | GCP Go Target  | &check;      | `odoh-client odoh --domain www.github.com. --dnstype AAAA --target odoh-target-dot-odoh-target.wm.r.appspot.com --proxy odoh-rs-proxy.crypto-team.workers.dev`       |
 
 Note: The CF Worker &rightarrow; CF Worker communication will NOT work and is by design from Cloudflare Workers. The 
-usage of ODOH Rust Proxy and Target together however does work correctly if the workers are hosted on different zones. 
+usage of ODOH Rust Proxy and Target together however does work correctly if the workers are hosted on different zones.
+
+### Downloading Logs
+
+```shell
+gcloud logging read 'resource.type="project"' --format=json --freshness=7d > log-2020-07-31-2216.json
+gcloud logging read 'resource.type="gce_instance" log_name="projects/odoh-target/logs/odohserver-client"' --format=json --freshness=7d > client_vm_logs_all.json
+```

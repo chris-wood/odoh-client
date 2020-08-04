@@ -3,7 +3,6 @@ package commands
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -24,17 +23,16 @@ const (
 	PROXY_HTTP_MODE = "https"
 )
 
-func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte) (response *dns.Msg, err error) {
-	client := http.Client{}
+func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte, client *http.Client) (response *dns.Msg, err error) {
 	queryUrl := fmt.Sprintf("https://%s/dns-query", hostname)
-	req, err := http.NewRequest(http.MethodGet, queryUrl, nil)
+	req, err := http.NewRequest(http.MethodPost, queryUrl, bytes.NewBuffer(serializedDnsQueryString))
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	queries := req.URL.Query()
-	encodedString := base64.RawURLEncoding.EncodeToString(serializedDnsQueryString)
-	queries.Add("dns", encodedString)
+	//encodedString := base64.RawURLEncoding.EncodeToString(serializedDnsQueryString)
+	//queries.Add("dns", encodedString)
 	req.Header.Set("Content-Type", "application/dns-message")
 	req.URL.RawQuery = queries.Encode()
 
@@ -161,12 +159,14 @@ func plainDnsRequest(c *cli.Context) error {
 	dnsTypeString := c.String("dnstype")
 	dnsTargetServer := c.String("target")
 
+	client := http.Client{}
+
 	dnsType := dnsQueryStringToType(dnsTypeString)
 
 	fmt.Println("[DNS] Request : ", domainName, dnsTypeString)
 
 	serializedDnsQuestion := prepareDnsQuestion(domainName, dnsType)
-	response, err := createPlainQueryResponse(dnsTargetServer, serializedDnsQuestion)
+	response, err := createPlainQueryResponse(dnsTargetServer, serializedDnsQuestion, &client)
 
 	if err != nil {
 		log.Fatalf("Unable to obtain a valid response for the DNS Query. %v\n", err)

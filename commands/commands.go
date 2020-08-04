@@ -90,6 +90,10 @@ var Commands = []cli.Command{
 				Name: "discovery",
 				Value: "odoh-discovery.crypto-team.workers.dev",
 			},
+			cli.StringFlag{
+				Name: "protocol",
+				Value: "ODOH",
+			},
 		},
 	},
 }
