@@ -242,11 +242,12 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 
 		rt.ClientUpstreamRequestTime = time.Now().UnixNano()
 		response, err := createPlainQueryResponse(chosenResolver, serializedDohQuery, client)
+		rt.ClientDownstreamResponseTime = time.Now().UnixNano()
 		if err != nil || response == nil {
 			exp := experimentResult{
 				Hostname:        hostname,
 				DnsType:         dnsType,
-				Key:             nil,
+				Key:             symmetricKey,
 				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
 				Target:          chosenResolver,
 				Proxy:           "",
@@ -264,6 +265,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		}
 
 		dnsAnswerBytes, err := response.Pack()
+		rt.ClientAnswerDecryptionTime = time.Now().UnixNano()
 		endTime := time.Now().UnixNano()
 		rt.EndTime = endTime
 
@@ -281,7 +283,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 			RequestID:   hex.EncodeToString(requestIDString),
 			DnsQuestion: serializedDohQuery,
 			DnsAnswer:   dnsAnswerBytes,
-			Proxy:       "",
+			Proxy:       "NONE-BASELINE-DOH",
 			Target:      chosenResolver,
 			Timestamp:   rt,
 			// experiment status
