@@ -22,6 +22,10 @@ var Commands = []cli.Command{
 				Name: "target",
 				Value: "localhost:8080",
 			},
+			cli.StringFlag{
+				Name: "proxy",
+				Value: "",
+			},
 		},
 	},
 	{

@@ -19,22 +19,22 @@ import (
 
 const (
 	OBLIVIOUS_DOH = "application/oblivious-dns-message"
+	DOH = "application/dns-message"
 	TARGET_HTTP_MODE = "https"
 	PROXY_HTTP_MODE = "https"
 )
 
-func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte, client *http.Client) (response *dns.Msg, err error) {
-	queryUrl := fmt.Sprintf("https://%s/dns-query", hostname)
-	req, err := http.NewRequest(http.MethodPost, queryUrl, bytes.NewBuffer(serializedDnsQueryString))
-	if err != nil {
-		log.Fatalln(err)
+func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte, proxy string, client *http.Client) (response *dns.Msg, err error) {
+	var useproxy bool
+	if proxy == "" {
+		useproxy = false
+	} else {
+		useproxy = true
 	}
-
-	queries := req.URL.Query()
-	//encodedString := base64.RawURLEncoding.EncodeToString(serializedDnsQueryString)
-	//queries.Add("dns", encodedString)
-	req.Header.Set("Content-Type", "application/dns-message")
-	req.URL.RawQuery = queries.Encode()
+	req, err := prepareHttpRequest(serializedDnsQueryString, useproxy, hostname, proxy, DOH)
+	if err != nil {
+		log.Println("Unable to prepare a DOH request")
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -50,7 +50,7 @@ func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte, 
 	return dnsBytes, nil
 }
 
-func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, proxy string) (req *http.Request, err error) {
+func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, proxy string, protocol string) (req *http.Request, err error) {
 	var baseurl string
 	var queries url.Values
 
@@ -67,14 +67,14 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 		queries.Add("targetpath", "/dns-query")
 	}
 
-	req.Header.Set("Content-Type", "application/oblivious-dns-message")
+	req.Header.Set("Content-Type", protocol)
 	req.URL.RawQuery = queries.Encode()
 
 	return req, err
 }
 
 func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool, targetIP string, proxy string, client *http.Client) (response *odoh.ObliviousDNSMessage, err error) {
-	req, err := prepareHttpRequest(serializedOdohDnsQueryString, useProxy, targetIP, proxy)
+	req, err := prepareHttpRequest(serializedOdohDnsQueryString, useProxy, targetIP, proxy, OBLIVIOUS_DOH)
 
 	if err != nil {
 		log.Fatalln(err)
@@ -158,6 +158,7 @@ func plainDnsRequest(c *cli.Context) error {
 	domainName := c.String("domain")
 	dnsTypeString := c.String("dnstype")
 	dnsTargetServer := c.String("target")
+	proxyChosen := c.String("proxy")
 
 	client := http.Client{}
 
@@ -166,7 +167,7 @@ func plainDnsRequest(c *cli.Context) error {
 	fmt.Println("[DNS] Request : ", domainName, dnsTypeString)
 
 	serializedDnsQuestion := prepareDnsQuestion(domainName, dnsType)
-	response, err := createPlainQueryResponse(dnsTargetServer, serializedDnsQuestion, &client)
+	response, err := createPlainQueryResponse(dnsTargetServer, serializedDnsQuestion, proxyChosen, &client)
 
 	if err != nil {
 		log.Fatalf("Unable to obtain a valid response for the DNS Query. %v\n", err)

@@ -241,7 +241,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		rt.ClientQueryEncryptionTime = timeToPrepareQuestionAndSerialize
 
 		rt.ClientUpstreamRequestTime = time.Now().UnixNano()
-		response, err := createPlainQueryResponse(chosenResolver, serializedDohQuery, client)
+		response, err := createPlainQueryResponse(chosenResolver, serializedDohQuery, "", client)
 		rt.ClientDownstreamResponseTime = time.Now().UnixNano()
 		if err != nil || response == nil {
 			exp := experimentResult{
@@ -290,6 +290,74 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 			Status: true,
 			IngestedFrom: e.IngestedFrom,
 			ProtocolType: "DOH",
+			ExperimentID: expId,
+		}
+		log.Printf("experiment : %v", exp.serialize())
+		channel <- exp
+	} else if protocol == "pDOH" {
+		rt := runningTime{}
+		start := time.Now()
+		requestId := sha256.Sum256(symmetricKey)
+		rt.Start = start.UnixNano()
+		targetIndex := int(symmetricKey[len(symmetricKey) - 1]) % len(resolvers)
+		chosenResolver := resolvers[targetIndex]
+		hashingTime := time.Now().UnixNano()
+		rt.ClientHashingOverheadTime = hashingTime
+
+		serializedDohQuery := prepareDnsQuestion(hostname, dnsType)
+		timeToPrepareQuestionAndSerialize := time.Now().UnixNano()
+		rt.ClientQueryEncryptionTime = timeToPrepareQuestionAndSerialize
+
+		rt.ClientUpstreamRequestTime = time.Now().UnixNano()
+		response, err := createPlainQueryResponse(chosenResolver, serializedDohQuery, proxy, client)
+		rt.ClientDownstreamResponseTime = time.Now().UnixNano()
+		if err != nil || response == nil {
+			exp := experimentResult{
+				Hostname:        hostname,
+				DnsType:         dnsType,
+				Key:             symmetricKey,
+				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
+				Target:          chosenResolver,
+				Proxy:           proxy,
+				STime:           start,
+				ETime:           time.Now(),
+				DnsAnswer:       []byte("dnsAnswer incorrectly and unable to Pack"),
+				Status:          false,
+				Timestamp:       rt,
+				IngestedFrom:    e.IngestedFrom,
+				ProtocolType:    protocol,
+				ExperimentID:    expId,
+			}
+			channel <- exp
+			return
+		}
+
+		dnsAnswerBytes, err := response.Pack()
+		rt.ClientAnswerDecryptionTime = time.Now().UnixNano()
+		endTime := time.Now().UnixNano()
+		rt.EndTime = endTime
+
+		var requestIDString []byte = requestId[:]
+
+		exp := experimentResult{
+			Hostname:        hostname,
+			DnsType:         dnsType,
+			Key:             []byte{},
+			TargetPublicKey: targetPublicKey,
+			// Overall timing parameters
+			STime: start,
+			ETime: time.Now(),
+			// Instrumentation
+			RequestID:   hex.EncodeToString(requestIDString),
+			DnsQuestion: serializedDohQuery,
+			DnsAnswer:   dnsAnswerBytes,
+			Proxy:       proxy,
+			Target:      chosenResolver,
+			Timestamp:   rt,
+			// experiment status
+			Status: true,
+			IngestedFrom: e.IngestedFrom,
+			ProtocolType: protocol,
 			ExperimentID: expId,
 		}
 		log.Printf("experiment : %v", exp.serialize())
