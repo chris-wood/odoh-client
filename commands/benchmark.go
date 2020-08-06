@@ -73,7 +73,7 @@ type experimentResult struct {
 var (
 	// DNS constants. Fill in a DNS server to forward to here.
 	//resolvers = []string{"cloudflare-dns.com", "dns.google", "dns.quad9.net"}
-	resolvers = []string{"cloudflare-dns.com", "dns.quad9.net"}
+	resolvers = []string{"cloudflare-dns.com", "dns.google", "dns.quad9.net"}
 )
 
 func (e *experimentResult) serialize() string {

@@ -55,7 +55,6 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 	var queries url.Values
 
 	if useProxy != true {
-		fmt.Printf("Preparing the query to dns-query endpoint with %v data\n.", serializedBody)
 		baseurl = fmt.Sprintf("%s://%s/%s", TARGET_HTTP_MODE, targetIP, "dns-query")
 		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
