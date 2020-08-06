@@ -368,8 +368,6 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		start := time.Now()
 		requestId := sha256.Sum256(symmetricKey)
 		rt.Start = start.UnixNano()
-		targetIndex := int(symmetricKey[len(symmetricKey) - 1]) % len(resolvers)
-		chosenResolver := resolvers[targetIndex]
 		hashingTime := time.Now().UnixNano()
 		rt.ClientHashingOverheadTime = hashingTime
 
@@ -378,7 +376,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		rt.ClientQueryEncryptionTime = timeToPrepareQuestionAndSerialize
 
 		rt.ClientUpstreamRequestTime = time.Now().UnixNano()
-		response, err := createPlainQueryResponse(chosenResolver, serializedDohQuery, proxy, client)
+		response, err := createPlainQueryResponse(target, serializedDohQuery, proxy, client)
 		rt.ClientDownstreamResponseTime = time.Now().UnixNano()
 		if err != nil || response == nil {
 			exp := experimentResult{
