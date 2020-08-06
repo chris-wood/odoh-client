@@ -2,8 +2,12 @@ package commands
 
 import (
 	"errors"
+	"fmt"
 	"github.com/chris-wood/odoh"
+	"golang.org/x/net/proxy"
+	"log"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -11,6 +15,7 @@ import (
 type state struct {
 	sync.RWMutex
 	publicKeyState map[string]odoh.ObliviousDNSPublicKey
+	baseClient *http.Client
 	client []*http.Client
 }
 
@@ -27,7 +32,30 @@ func GetInstance(N uint64) *state {
 		}
 		instance.client[index] = &http.Client{Transport: tr}
 	}
+	instance.baseClient = &http.Client{Transport: &http.Transport{
+		MaxIdleConnsPerHost: 1024,
+		TLSHandshakeTimeout: 0 * time.Second,
+	}}
 	instance.publicKeyState = make(map[string]odoh.ObliviousDNSPublicKey)
+	return &instance
+}
+
+func UpdateClientsToTorClients(proxyHostName string, proxyPort int) *state {
+	torProxyString := fmt.Sprintf("socks5://%s:%d", proxyHostName, proxyPort)
+	torProxyURL, err := url.Parse(torProxyString)
+	if err != nil {
+		log.Fatalln("Unable to parse SOCKS5 Proxy endpoint")
+	}
+	torDialer, err := proxy.FromURL(torProxyURL, proxy.Direct)
+	for index := 0 ; index < len(instance.client); index++ {
+		tr := &http.Transport{
+			MaxIdleConnsPerHost: 1024,
+			TLSHandshakeTimeout: 0 * time.Second,
+			Dial: torDialer.Dial,
+		}
+		instance.client[index] = &http.Client{Transport: tr}
+		log.Printf("Creating Tor Client Instance")
+	}
 	return &instance
 }
 

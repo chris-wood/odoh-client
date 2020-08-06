@@ -429,6 +429,77 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		}
 		log.Printf("experiment : %v", exp.serialize())
 		channel <- exp
+	} else if protocol == "DOHOT" {
+		rt := runningTime{}
+		start := time.Now()
+		requestId := sha256.Sum256(symmetricKey)
+		rt.Start = start.UnixNano()
+
+		targetIndex := int(symmetricKey[len(symmetricKey) - 1]) % len(resolvers)
+		chosenResolver := resolvers[targetIndex]
+
+		hashingTime := time.Now().UnixNano()
+		rt.ClientHashingOverheadTime = hashingTime
+
+		serializedDohQuery := prepareDnsQuestion(hostname, dnsType)
+		timeToPrepareQuestionAndSerialize := time.Now().UnixNano()
+		rt.ClientQueryEncryptionTime = timeToPrepareQuestionAndSerialize
+
+		rt.ClientUpstreamRequestTime = time.Now().UnixNano()
+		response, err := createPlainQueryResponse(chosenResolver, serializedDohQuery, "", client)
+		rt.ClientDownstreamResponseTime = time.Now().UnixNano()
+
+		if err != nil || response == nil {
+			exp := experimentResult{
+				Hostname:        hostname,
+				DnsType:         dnsType,
+				Key:             symmetricKey,
+				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
+				Target:          chosenResolver,
+				Proxy:           "",
+				STime:           start,
+				ETime:           time.Now(),
+				DnsAnswer:       []byte("dnsAnswer incorrectly and unable to Pack"),
+				Status:          false,
+				Timestamp:       rt,
+				IngestedFrom:    e.IngestedFrom,
+				ProtocolType:    protocol,
+				ExperimentID:    expId,
+			}
+			channel <- exp
+			return
+		}
+
+		dnsAnswerBytes, err := response.Pack()
+		rt.ClientAnswerDecryptionTime = time.Now().UnixNano()
+		endTime := time.Now().UnixNano()
+		rt.EndTime = endTime
+
+		var requestIDString []byte = requestId[:]
+
+		exp := experimentResult{
+			Hostname:        hostname,
+			DnsType:         dnsType,
+			Key:             []byte{},
+			TargetPublicKey: targetPublicKey,
+			// Overall timing parameters
+			STime: start,
+			ETime: time.Now(),
+			// Instrumentation
+			RequestID:   hex.EncodeToString(requestIDString),
+			DnsQuestion: serializedDohQuery,
+			DnsAnswer:   dnsAnswerBytes,
+			Proxy:       "NONE-BASELINE-DOHOT",
+			Target:      chosenResolver,
+			Timestamp:   rt,
+			// experiment status
+			Status: true,
+			IngestedFrom: e.IngestedFrom,
+			ProtocolType: protocol,
+			ExperimentID: expId,
+		}
+		log.Printf("experiment : %v", exp.serialize())
+		channel <- exp
 	} else {
 		log.Fatalf("No Known Protocol Expeirment to Run.")
 	}
@@ -504,15 +575,18 @@ func benchmarkClient(c *cli.Context) {
 	log.Printf("Now operating on a total size of : [%v] hostnames", len(hostnames))
 
 	// Create a base state of the experiment
-	state := GetInstance(numberOfParallelClients)
 	telemetryState := getTelemetryInstance()
+	state := GetInstance(numberOfParallelClients)
+	if protocol == "DOHOT" {
+		state = UpdateClientsToTorClients("localhost", 9050)
+	}
 	//telemetryResponse := telemetryState.getClusterInformation()
 	//log.Printf("Server: %s", telemetryResponse["version"].(map[string]interface{})["number"])
 
 	// Create network requests concurrently.
 	const dnsMessageType = dns.TypeA
 
-	availableServices, err := DiscoverProxiesAndTargets(discoveryServiceHostname, instance.client[0])
+	availableServices, err := DiscoverProxiesAndTargets(discoveryServiceHostname, instance.baseClient)
 	if err != nil {
 		log.Fatalf("Unable to discover the services available.")
 	}
@@ -521,7 +595,7 @@ func benchmarkClient(c *cli.Context) {
 	targets := availableServices.Targets
 	proxies := availableServices.Proxies
 	for _, target := range targets {
-		pkbytes, err := RetrievePublicKey(target, instance.client[0])
+		pkbytes, err := RetrievePublicKey(target, instance.baseClient)
 		if err != nil {
 			log.Fatalf("Unable to obtain the public Key from %v. Error %v", target, err)
 		}
