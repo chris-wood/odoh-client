@@ -628,7 +628,6 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 			ExperimentID: expId,
 		}
 		channel <- exp
-		return
 	} else {
 		log.Fatalf("No Known Protocol Experiment to Run.")
 	}
