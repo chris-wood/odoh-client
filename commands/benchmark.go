@@ -514,7 +514,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		connection := new(dns.Conn)
 		rt.ClientUpstreamRequestTime = time.Now().UnixNano()
 		var err error
-		if connection.Conn, err = net.DialTimeout("tcp", dnsCryptHost, 2500 * time.Millisecond); err != nil {
+		if connection.Conn, err = net.DialTimeout("udp", dnsCryptHost, 2500 * time.Millisecond); err != nil {
 			exp := experimentResult{
 				Hostname: hostname,
 				DnsType: dnsType,
@@ -524,7 +524,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 				Proxy: "",
 				STime: start,
 				ETime: time.Now(),
-				DnsAnswer: []byte("dnsAnswer incorrectly and unable to Pack"),
+				DnsAnswer: []byte(err.Error()),
 				Status: false,
 				Timestamp: rt,
 				IngestedFrom: e.IngestedFrom,
