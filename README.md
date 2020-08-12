@@ -6,8 +6,8 @@ This is a command line interface as a client for performing oblivious dns-over-h
 ### Current Support:
 
 - [x] DoH Query : `odoh-client doh --domain www.cloudflare.com. --dnsType AAAA`
-- [x] oDoH Query: `odoh-client odoh --domain www.cloudflare.com. --dnsType AAAA --key 01234567890123456789012345678912 --target 1.1.1.1`
-- [x] oDoH Query via Proxy: `odoh-client odoh --domain www.cloudflare.com --dnsType AAAA --key 01234567890123456789012345678912 --target 1.1.1.1 --use-proxy true --proxy sampleproxy.service.hosted.net[:port]`
+- [x] oDoH Query: `odoh-client odoh --domain www.cloudflare.com. --dnsType AAAA --target 1.1.1.1`
+- [x] oDoH Query via Proxy: `odoh-client odoh --domain www.cloudflare.com --dnsType AAAA --target 1.1.1.1 --use-proxy true --proxy sampleproxy.service.hosted.net[:port]`
 
 The current implementation for oDoH uses a dummy Public Key stub on the target server which provides the public key to 
 the client. In the ideal implementation, this will be obtained after performing DNSSEC validation + HTTPSSVC.

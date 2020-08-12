@@ -10,6 +10,7 @@ import (
 	"github.com/urfave/cli"
 	"log"
 	mathrand "math/rand"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -500,8 +501,136 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		}
 		log.Printf("experiment : %v", exp.serialize())
 		channel <- exp
+	} else if protocol == "DNSCrypt" {
+		dnsCryptHost := "127.0.0.1:53"
+		rt := runningTime{}
+		start := time.Now()
+		rt.Start = start.UnixNano()
+		query := new(dns.Msg)
+		rt.ClientHashingOverheadTime = time.Now().UnixNano()
+		query.SetQuestion(hostname, dnsType)
+		rt.ClientQueryEncryptionTime = time.Now().UnixNano()
+
+		connection := new(dns.Conn)
+		rt.ClientUpstreamRequestTime = time.Now().UnixNano()
+		var err error
+		if connection.Conn, err = net.DialTimeout("tcp", dnsCryptHost, 2500 * time.Millisecond); err != nil {
+			exp := experimentResult{
+				Hostname: hostname,
+				DnsType: dnsType,
+				Key: symmetricKey,
+				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
+				Target: "",
+				Proxy: "",
+				STime: start,
+				ETime: time.Now(),
+				DnsAnswer: []byte("dnsAnswer incorrectly and unable to Pack"),
+				Status: false,
+				Timestamp: rt,
+				IngestedFrom: e.IngestedFrom,
+				ProtocolType: protocol,
+				ExperimentID: expId,
+			}
+			channel <- exp
+			return
+		}
+
+		connection.SetReadDeadline(time.Now().Add(2500 * time.Millisecond))
+		connection.SetWriteDeadline(time.Now().Add(2500 * time.Millisecond))
+
+		if err := connection.WriteMsg(query); err != nil {
+			exp := experimentResult{
+				Hostname: hostname,
+				DnsType: dnsType,
+				Key: symmetricKey,
+				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
+				Target: "",
+				Proxy: "",
+				STime: start,
+				ETime: time.Now(),
+				DnsAnswer: []byte("dnsAnswer incorrectly and unable to Pack"),
+				Status: false,
+				Timestamp: rt,
+				IngestedFrom: e.IngestedFrom,
+				ProtocolType: protocol,
+				ExperimentID: expId,
+			}
+			channel <- exp
+			return
+		}
+
+		rt.ClientDownstreamResponseTime = time.Now().UnixNano()
+
+		response, err := connection.ReadMsg()
+		if err != nil {
+			exp := experimentResult{
+				Hostname: hostname,
+				DnsType: dnsType,
+				Key: symmetricKey,
+				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
+				Target: "",
+				Proxy: "",
+				STime: start,
+				ETime: time.Now(),
+				DnsAnswer: []byte("dnsAnswer unable to Read"),
+				Status: false,
+				Timestamp: rt,
+				IngestedFrom: e.IngestedFrom,
+				ProtocolType: protocol,
+				ExperimentID: expId,
+			}
+			channel <- exp
+			return
+		}
+
+		rt.ClientAnswerDecryptionTime = time.Now().UnixNano()
+
+		response.Id = query.Id
+
+		responseBytes, err := response.Pack()
+		if err != nil {
+			exp := experimentResult{
+				Hostname: hostname,
+				DnsType: dnsType,
+				Key: symmetricKey,
+				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
+				Target: "",
+				Proxy: "",
+				STime: start,
+				ETime: time.Now(),
+				DnsAnswer: []byte("Failed to Pack the DNSAnswer"),
+				Status: false,
+				Timestamp: rt,
+				IngestedFrom: e.IngestedFrom,
+				ProtocolType: protocol,
+				ExperimentID: expId,
+			}
+			channel <- exp
+			return
+		}
+
+		rt.EndTime = time.Now().UnixNano()
+
+		exp := experimentResult{
+			Hostname: hostname,
+			DnsType: dnsType,
+			Key: symmetricKey,
+			TargetPublicKey: odoh.ObliviousDNSPublicKey{},
+			Target: "",
+			Proxy: "",
+			STime: start,
+			ETime: time.Now(),
+			DnsAnswer: responseBytes,
+			Status: true,
+			Timestamp: rt,
+			IngestedFrom: e.IngestedFrom,
+			ProtocolType: protocol,
+			ExperimentID: expId,
+		}
+		channel <- exp
+		return
 	} else {
-		log.Fatalf("No Known Protocol Expeirment to Run.")
+		log.Fatalf("No Known Protocol Experiment to Run.")
 	}
 }
 
