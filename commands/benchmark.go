@@ -10,7 +10,6 @@ import (
 	"github.com/urfave/cli"
 	"log"
 	"math"
-	mathrand "math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -731,24 +730,30 @@ func benchmarkClient(c *cli.Context) {
 	}
 
 	var proxyWithLowestLatency string
-	var proxyLatencyMin int64
-	proxyLatencyMin = math.MaxInt64
+	var targetWithLowestLatency string
+	var LatencyMin int64
+	LatencyMin = math.MaxInt64
 
-	for _, proxy := range proxies {
-		start := time.Now().UnixNano()
-		respBytes, err := QueryProxyTime(proxy, instance.baseClient)
-		if err != nil {
-			log.Fatalf("Unable to reach the queries.")
-		}
-		end := time.Now().UnixNano()
-		totalTime := (end - start) / (1000.0 * 1000.0)
-		log.Printf("[%v] : %v ms of size %v\n", proxy, totalTime, len(respBytes))
-		if totalTime < proxyLatencyMin {
-			proxyLatencyMin = totalTime
-			proxyWithLowestLatency = proxy
+	for _, target := range targets {
+		for _, proxy := range proxies {
+			start := time.Now().UnixNano()
+			pk, err := state.GetPublicKey(target)
+			respBytes, err := QueryProxyTargetTime(proxy, target, pk, instance.baseClient)
+			if err != nil {
+				log.Fatalf("Unable to reach the queries.")
+			}
+			end := time.Now().UnixNano()
+			totalTime := (end - start) / (1000.0 * 1000.0)
+			log.Printf("[%v] [%v] : %v ms of size %v\n", proxy, target, totalTime, len(respBytes))
+			if totalTime < LatencyMin {
+				LatencyMin = totalTime
+				proxyWithLowestLatency = proxy
+				targetWithLowestLatency = target
+			}
 		}
 	}
-	log.Printf("Proxy with lowest latency : %v ms [%v]\n", proxyLatencyMin, proxyWithLowestLatency)
+
+	log.Printf("Target and Proxy with lowest latency : %v ms [%v][%v]\n", LatencyMin, targetWithLowestLatency, proxyWithLowestLatency)
 
 	keysAvailable := state.TotalNumberOfTargets()
 	log.Printf("%v targets available to choose from.", keysAvailable)
@@ -781,7 +786,7 @@ func benchmarkClient(c *cli.Context) {
 				key := symmetricKeys[index]
 				clientUsed := state.client[clientIndex]
 				log.Printf("Choosing [Client %v] to make a query", index % int(numberOfParallelClients))
-				chosenTarget := targets[mathrand.Intn(keysAvailable)]
+				chosenTarget := targetWithLowestLatency //  targets[mathrand.Intn(keysAvailable)]
 				chosenProxy  := proxyWithLowestLatency  // proxies[mathrand.Intn(len(proxies))]
 				pkOfTarget, err := state.GetPublicKey(chosenTarget)
 				if err != nil {

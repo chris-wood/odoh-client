@@ -153,8 +153,15 @@ func RetrievePublicKey(ip string, client *http.Client) (odoh.ObliviousDNSPublicK
 }
 
 
-func QueryProxyTime(ip string, client *http.Client) ([]byte, error) {
-	req, err := http.NewRequest(http.MethodGet, PROXY_HTTP_MODE + "://" + ip, nil)
+func QueryProxyTargetTime(proxy string, target string, pk odoh.ObliviousDNSPublicKey, client *http.Client) ([]byte, error) {
+	key := make([]byte, 16)
+	_, err := rand.Read(key)
+	if err != nil {
+		log.Fatalf("Unable to read random bytes to make a symmetric Key.\n")
+	}
+	domainName := "www.example.com."
+	serializedODOHMessage, err := prepareOdohQuestion(domainName, dns.TypeA, key, pk)
+	req, err := prepareHttpRequest(serializedODOHMessage, true, target, proxy, OBLIVIOUS_DOH)
 	if err != nil {
 		log.Fatalln(err)
 	}
