@@ -9,6 +9,7 @@ import (
 	"github.com/chris-wood/odoh"
 	"github.com/urfave/cli"
 	"log"
+	"math"
 	mathrand "math/rand"
 	"net"
 	"net/http"
@@ -729,6 +730,26 @@ func benchmarkClient(c *cli.Context) {
 		state.InsertKey(target, pkbytes)
 	}
 
+	var proxyWithLowestLatency string
+	var proxyLatencyMin int64
+	proxyLatencyMin = math.MaxInt64
+
+	for _, proxy := range proxies {
+		start := time.Now().UnixNano()
+		respBytes, err := QueryProxyTime(proxy, instance.baseClient)
+		if err != nil {
+			log.Fatalf("Unable to reach the queries.")
+		}
+		end := time.Now().UnixNano()
+		totalTime := (end - start) / (1000.0 * 1000.0)
+		log.Printf("[%v] : %v ms of size %v\n", proxy, totalTime, len(respBytes))
+		if totalTime < proxyLatencyMin {
+			proxyLatencyMin = totalTime
+			proxyWithLowestLatency = proxy
+		}
+	}
+	log.Printf("Proxy with lowest latency : %v ms [%v]\n", proxyLatencyMin, proxyWithLowestLatency)
+
 	keysAvailable := state.TotalNumberOfTargets()
 	log.Printf("%v targets available to choose from.", keysAvailable)
 	log.Printf("%v proxies available to choose from.", len(proxies))
@@ -761,7 +782,7 @@ func benchmarkClient(c *cli.Context) {
 				clientUsed := state.client[clientIndex]
 				log.Printf("Choosing [Client %v] to make a query", index % int(numberOfParallelClients))
 				chosenTarget := targets[mathrand.Intn(keysAvailable)]
-				chosenProxy  := proxies[mathrand.Intn(len(proxies))]
+				chosenProxy  := proxyWithLowestLatency  // proxies[mathrand.Intn(len(proxies))]
 				pkOfTarget, err := state.GetPublicKey(chosenTarget)
 				if err != nil {
 					log.Fatalf("Unable to retrieve the PK requested")

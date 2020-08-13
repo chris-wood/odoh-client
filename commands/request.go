@@ -153,6 +153,26 @@ func RetrievePublicKey(ip string, client *http.Client) (odoh.ObliviousDNSPublicK
 }
 
 
+func QueryProxyTime(ip string, client *http.Client) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, PROXY_HTTP_MODE + "://" + ip, nil)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return bodyBytes, err
+}
+
+
 func plainDnsRequest(c *cli.Context) error {
 	domainName := c.String("domain")
 	dnsTypeString := c.String("dnstype")
