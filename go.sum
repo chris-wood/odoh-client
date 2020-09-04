@@ -45,6 +45,8 @@ github.com/chris-wood/dns v0.0.0-20161202223856-f4d2b086946a h1:RWhxDAyhj+kbINmE
 github.com/chris-wood/dns v0.0.0-20161202223856-f4d2b086946a/go.mod h1:Bue0czgDF3Wc5xx7zFZhHQd5ipC2w8YJut6H86QNRBc=
 github.com/chris-wood/odoh v0.0.0-20200713191747-dca7f5ffc0b3 h1:Hobxm0xGev00Kbh/Xdjaga3RKjdREqHisd4t77uCjtA=
 github.com/chris-wood/odoh v0.0.0-20200713191747-dca7f5ffc0b3/go.mod h1:uj93pPykgQ+WC/h9KQDNW6o76g2l28stR+UNQEOj1Uc=
+github.com/chris-wood/odoh v0.0.0-20200904213540-aa350f1a2166 h1:/iMLgXmLJwGKU2pHuaAiJ5uRScsD1oV4+m2l9BHApEk=
+github.com/chris-wood/odoh v0.0.0-20200904213540-aa350f1a2166/go.mod h1:uj93pPykgQ+WC/h9KQDNW6o76g2l28stR+UNQEOj1Uc=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
