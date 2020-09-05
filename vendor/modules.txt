@@ -12,7 +12,7 @@ git.schwanenlied.me/yawning/x448.git
 # github.com/chris-wood/dns v0.0.0-20161202223856-f4d2b086946a
 ## explicit
 github.com/chris-wood/dns
-# github.com/chris-wood/odoh v0.0.0-20200713191747-dca7f5ffc0b3
+# github.com/chris-wood/odoh v0.0.0-20200904213540-aa350f1a2166
 ## explicit
 github.com/chris-wood/odoh
 # github.com/cisco/go-hpke v0.0.0-20200710171132-37d332d5f613
