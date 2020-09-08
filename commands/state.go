@@ -27,6 +27,8 @@ func GetInstance(N uint64) *state {
 		tr := &http.Transport{
 			MaxIdleConnsPerHost: 1024,
 			TLSHandshakeTimeout: 0 * time.Second,
+			DisableKeepAlives: true,
+			DisableCompression: true,
 			// Uncomment the line below to explicitly disable http/2 in the clients.
 			//TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
 		}

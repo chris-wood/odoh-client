@@ -94,7 +94,7 @@ type DiscoveryServiceResponse struct {
 func prepareSymmetricKeys(quantity int) [][]byte {
 	// Assume that all the keys necessary for the experiment are 16 bytes.
 	result := make([][]byte, quantity)
-	start := time.Now()
+	//start := time.Now()
 	for i := 0; i < quantity; i++ {
 		key := make([]byte, 16)
 		_, err := rand.Read(key)
@@ -103,7 +103,7 @@ func prepareSymmetricKeys(quantity int) [][]byte {
 		}
 		result[i] = key
 	}
-	log.Printf("Time (ms) to generate %v symmetric keys : [%v]", len(result), time.Since(start).Microseconds())
+	//log.Printf("Time (ms) to generate %v symmetric keys : [%v]", len(result), time.Since(start).Microseconds())
 	return result
 }
 

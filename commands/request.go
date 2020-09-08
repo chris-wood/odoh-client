@@ -15,6 +15,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 const (
@@ -287,11 +288,14 @@ func validateEncryptedResponse(message *odoh.ObliviousDNSMessage, key []byte) (r
 
 	log.Printf("[ODOH] [Decrypted Response] : %v\n", decryptedResponse)
 
+	s := time.Now().UnixNano()
 	dnsBytes, err := parseDnsResponse(decryptedResponse)
 	if err != nil {
 		log.Printf("Unable to parse DNS bytes after decryption of the message from target server.")
 		return nil, err
 	}
+	e := time.Now().UnixNano()
+	log.Printf("Time to parse DNS response : %v us", (e-s)/1000.0)
 
 	return dnsBytes, err
 }
