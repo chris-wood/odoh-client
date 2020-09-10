@@ -1,0 +1,39 @@
+---
+- hosts: clients
+  tasks:
+    - name: Test Connection to the Host
+      ping:
+    - name: Copy Build and Setup Instructions
+      copy:
+        src: ./build_manage.sh
+        dest: ~/build_manage.sh
+        mode: '0766'
+    - name: Run Build and Prepare Machines for Requirements
+      command: sh ~/build_manage.sh &
+    - name: Git Clone the ODOH Client Repository and Build Binary Script
+      copy:
+        src: ./odoh-client-fetch-and-build.sh
+        dest: ~/odoh-client-fetch-and-build.sh
+        mode: '0766'
+    - name: Copy Dataset of Million Domains for Experiments
+      copy:
+        src: ./dataset.csv
+        dest: ~/go/odoh-client/dataset.csv
+        mode: '0655'
+    - name: Copy DNSCrypt Proxy Configuration
+      copy:
+        src: ./dnscrypt-proxy.toml
+        dest: ~/dnscrypt/dnscrypt-proxy.toml
+    - name: Copy Final DNS Crypt Resolver Configuration
+      copy:
+        src: ./resolv.conf
+        dest: ~/resolv.conf
+    - name: Run Build and Deploy ODOH Client
+      command: "sh ~/odoh-client-fetch-and-build.sh"
+    - name: Copy GCE Application Service Requirements to Path
+      copy:
+        src: ./odoh-target-service-account.json
+        dest: ~/go/odoh-client/odoh-target-service-account.json
+        mode: '0544'
+    - name: Run ODOH Client
+      command: "echo $CLIENT_INSTANCE_NAME"
