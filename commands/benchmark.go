@@ -680,6 +680,19 @@ func benchmarkClient(c *cli.Context) {
 	discoveryServiceHostname := c.String("discovery")
 	protocol := c.String("protocol")
 	tickTrigger := getTickTriggerTiming(int(requestPerMinute))
+	ingestionMode := c.String("ingest")
+	ingestionElkUrl := c.String("elkurl")
+	gcpProjectID := c.String("gcpproject")
+	gcpLoggingName := c.String("gcplogname")
+
+	telemetryConfig := make(map[string]string)
+	telemetryConfig["ingest"] = ingestionMode
+	if ingestionMode == "GCP" {
+		telemetryConfig["gcpProjectId"] = gcpProjectID
+		telemetryConfig["gcpLoggingName"] = gcpLoggingName
+	} else if ingestionMode == "ELK" {
+		telemetryConfig["elkurl"] = ingestionElkUrl
+	}
 
 	totalResponsesNeeded := numberOfParallelClients * filterCount
 
@@ -693,7 +706,7 @@ func benchmarkClient(c *cli.Context) {
 	log.Printf("Now operating on a total size of : [%v] hostnames", len(hostnames))
 
 	// Create a base state of the experiment
-	telemetryState := getTelemetryInstance()
+	telemetryState := getTelemetryInstance(telemetryConfig)
 	state := GetInstance(numberOfParallelClients)
 	if protocol == "DOHOT" {
 		state = UpdateClientsToTorClients("localhost", 9050)
@@ -813,9 +826,11 @@ func benchmarkClient(c *cli.Context) {
 	totalResponse := time.Since(start)
 	log.Printf("Time to perform [%v] workflow tasks : [%v]", len(hostnames), totalResponse.Milliseconds())
 
-	log.Printf("Collected [%v] Responses.", len(responses))
-	telemetryState.streamLogsToGCP(responses)
-	//telemetryState.streamLogsToELK(responses)
-
-	telemetryState.tearDown()
+	if ingestionMode == "GCP" {
+		log.Printf("Collected [%v] Responses.", len(responses))
+		telemetryState.streamLogsToGCP(responses)
+		telemetryState.tearDown()
+	} else if ingestionMode == "ELK" {
+		telemetryState.streamLogsToELK(responses)
+	}
 }

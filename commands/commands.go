@@ -98,6 +98,26 @@ var Commands = []cli.Command{
 				Name:  "protocol",
 				Value: "ODOH",
 			},
+			cli.StringFlag{
+				Name:  "ingest",
+				Value: "GCP",
+				Usage: "Supported Ingestion Possible values are GCP, ELK, LOG",
+			},
+			cli.StringFlag{
+				Name:  "gcpproject",
+				Value: "odoh-target",
+				Usage: "The GCP project name if the ingest mode is GCP",
+			},
+			cli.StringFlag{
+				Name:  "gcplogname",
+				Value: "odohserver-client",
+				Usage: "The GCP Logging name to be used by the cloudlogging instance",
+			},
+			cli.StringFlag{
+				Name:  "elkurl",
+				Value: "http://localhost:9200/",
+				Usage: "Used when the ingest mode is ELK and reports logs to the ELK instance",
+			},
 		},
 	},
 	{
