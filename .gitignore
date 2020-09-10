@@ -10,3 +10,10 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+# Other git ignores
+.DS_Store
+.idea/*
+automation/adblock_for_firefox-4.20.0-fx.xpi
+geckodriver.log
+*-service-account.json
