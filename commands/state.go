@@ -15,8 +15,8 @@ import (
 type state struct {
 	sync.RWMutex
 	publicKeyState map[string]odoh.ObliviousDNSPublicKey
-	baseClient *http.Client
-	client []*http.Client
+	baseClient     *http.Client
+	client         []*http.Client
 }
 
 var instance state
@@ -47,11 +47,11 @@ func UpdateClientsToTorClients(proxyHostName string, proxyPort int) *state {
 		log.Fatalln("Unable to parse SOCKS5 Proxy endpoint")
 	}
 	torDialer, err := proxy.FromURL(torProxyURL, proxy.Direct)
-	for index := 0 ; index < len(instance.client); index++ {
+	for index := 0; index < len(instance.client); index++ {
 		tr := &http.Transport{
 			MaxIdleConnsPerHost: 1024,
 			TLSHandshakeTimeout: 0 * time.Second,
-			Dial: torDialer.Dial,
+			Dial:                torDialer.Dial,
 		}
 		instance.client[index] = &http.Client{Transport: tr}
 		log.Printf("Creating Tor Client Instance")

@@ -42,8 +42,8 @@ type experiment struct {
 	Key             []byte
 	TargetPublicKey odoh.ObliviousDNSPublicKey
 	// Instrumentation
-	Proxy       string
-	Target      string
+	Proxy  string
+	Target string
 	// Timing parameters
 	IngestedFrom string
 	Protocol     string
@@ -65,7 +65,7 @@ type experimentResult struct {
 	Target      string
 	Timestamp   runningTime
 	// experiment status
-	Status bool
+	Status       bool
 	IngestedFrom string
 	ProtocolType string
 	ExperimentID string
@@ -94,7 +94,6 @@ type DiscoveryServiceResponse struct {
 func prepareSymmetricKeys(quantity int) [][]byte {
 	// Assume that all the keys necessary for the experiment are 16 bytes.
 	result := make([][]byte, quantity)
-	//start := time.Now()
 	for i := 0; i < quantity; i++ {
 		key := make([]byte, 16)
 		_, err := rand.Read(key)
@@ -103,7 +102,6 @@ func prepareSymmetricKeys(quantity int) [][]byte {
 		}
 		result[i] = key
 	}
-	//log.Printf("Time (ms) to generate %v symmetric keys : [%v]", len(result), time.Since(start).Microseconds())
 	return result
 }
 
@@ -158,14 +156,12 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 				Status:          false,
 				Timestamp:       rt,
 				IngestedFrom:    e.IngestedFrom,
-				ProtocolType:    "ODOH",
+				ProtocolType:    protocol,
 				ExperimentID:    expId,
 			}
 			channel <- exp
 			return
 		}
-
-		log.Printf("[DNSANSWER] %v %v\n", odohMessage, symmetricKey)
 		dnsAnswer, err := validateEncryptedResponse(odohMessage, symmetricKey)
 		validationTime := time.Now().UnixNano()
 		rt.ClientAnswerDecryptionTime = validationTime
@@ -183,7 +179,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 				Status:          false,
 				Timestamp:       rt,
 				IngestedFrom:    e.IngestedFrom,
-				ProtocolType:    "ODOH",
+				ProtocolType:    protocol,
 				ExperimentID:    expId,
 			}
 			channel <- exp
@@ -221,19 +217,18 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 			Target:      target,
 			Timestamp:   rt,
 			// experiment status
-			Status: true,
+			Status:       true,
 			IngestedFrom: e.IngestedFrom,
-			ProtocolType: "ODOH",
+			ProtocolType: protocol,
 			ExperimentID: expId,
 		}
-		log.Printf("experiment : %v", exp.serialize())
 		channel <- exp
 	} else if protocol == "DOH" {
 		rt := runningTime{}
 		start := time.Now()
 		requestId := sha256.Sum256(symmetricKey)
 		rt.Start = start.UnixNano()
-		targetIndex := int(symmetricKey[len(symmetricKey) - 1]) % len(resolvers)
+		targetIndex := int(symmetricKey[len(symmetricKey)-1]) % len(resolvers)
 		chosenResolver := resolvers[targetIndex]
 		hashingTime := time.Now().UnixNano()
 		rt.ClientHashingOverheadTime = hashingTime
@@ -289,19 +284,18 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 			Target:      chosenResolver,
 			Timestamp:   rt,
 			// experiment status
-			Status: true,
+			Status:       true,
 			IngestedFrom: e.IngestedFrom,
-			ProtocolType: "DOH",
+			ProtocolType: protocol,
 			ExperimentID: expId,
 		}
-		log.Printf("experiment : %v", exp.serialize())
 		channel <- exp
 	} else if protocol == "pDOH" {
 		rt := runningTime{}
 		start := time.Now()
 		requestId := sha256.Sum256(symmetricKey)
 		rt.Start = start.UnixNano()
-		targetIndex := int(symmetricKey[len(symmetricKey) - 1]) % len(resolvers)
+		targetIndex := int(symmetricKey[len(symmetricKey)-1]) % len(resolvers)
 		chosenResolver := resolvers[targetIndex]
 		hashingTime := time.Now().UnixNano()
 		rt.ClientHashingOverheadTime = hashingTime
@@ -357,14 +351,13 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 			Target:      chosenResolver,
 			Timestamp:   rt,
 			// experiment status
-			Status: true,
+			Status:       true,
 			IngestedFrom: e.IngestedFrom,
 			ProtocolType: protocol,
 			ExperimentID: expId,
 		}
-		log.Printf("experiment : %v", exp.serialize())
 		channel <- exp
-	} else if protocol == "ODOHse" {
+	} else if protocol == "CleartextODOH" {
 		rt := runningTime{}
 		start := time.Now()
 		requestId := sha256.Sum256(symmetricKey)
@@ -423,12 +416,11 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 			Target:      target,
 			Timestamp:   rt,
 			// experiment status
-			Status: true,
+			Status:       true,
 			IngestedFrom: e.IngestedFrom,
 			ProtocolType: protocol,
 			ExperimentID: expId,
 		}
-		log.Printf("experiment : %v", exp.serialize())
 		channel <- exp
 	} else if protocol == "DOHOT" {
 		rt := runningTime{}
@@ -436,7 +428,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		requestId := sha256.Sum256(symmetricKey)
 		rt.Start = start.UnixNano()
 
-		targetIndex := int(symmetricKey[len(symmetricKey) - 1]) % len(resolvers)
+		targetIndex := int(symmetricKey[len(symmetricKey)-1]) % len(resolvers)
 		chosenResolver := resolvers[targetIndex]
 
 		hashingTime := time.Now().UnixNano()
@@ -494,7 +486,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 			Target:      chosenResolver,
 			Timestamp:   rt,
 			// experiment status
-			Status: true,
+			Status:       true,
 			IngestedFrom: e.IngestedFrom,
 			ProtocolType: protocol,
 			ExperimentID: expId,
@@ -514,22 +506,22 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		connection := new(dns.Conn)
 		rt.ClientUpstreamRequestTime = time.Now().UnixNano()
 		var err error
-		if connection.Conn, err = net.DialTimeout("tcp", dnsCryptHost, 2500 * time.Millisecond); err != nil {
+		if connection.Conn, err = net.DialTimeout("tcp", dnsCryptHost, 2500*time.Millisecond); err != nil {
 			exp := experimentResult{
-				Hostname: hostname,
-				DnsType: dnsType,
-				Key: symmetricKey,
+				Hostname:        hostname,
+				DnsType:         dnsType,
+				Key:             symmetricKey,
 				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
-				Target: dnsCryptHost,
-				Proxy: "",
-				STime: start,
-				ETime: time.Now(),
-				DnsAnswer: []byte(err.Error()),
-				Status: false,
-				Timestamp: rt,
-				IngestedFrom: e.IngestedFrom,
-				ProtocolType: protocol,
-				ExperimentID: expId,
+				Target:          dnsCryptHost,
+				Proxy:           "",
+				STime:           start,
+				ETime:           time.Now(),
+				DnsAnswer:       []byte(err.Error()),
+				Status:          false,
+				Timestamp:       rt,
+				IngestedFrom:    e.IngestedFrom,
+				ProtocolType:    protocol,
+				ExperimentID:    expId,
 			}
 			channel <- exp
 			return
@@ -540,20 +532,20 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 
 		if err := connection.WriteMsg(query); err != nil {
 			exp := experimentResult{
-				Hostname: hostname,
-				DnsType: dnsType,
-				Key: symmetricKey,
+				Hostname:        hostname,
+				DnsType:         dnsType,
+				Key:             symmetricKey,
 				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
-				Target: dnsCryptHost,
-				Proxy: "",
-				STime: start,
-				ETime: time.Now(),
-				DnsAnswer: []byte("dnsAnswer incorrectly and unable to Pack"),
-				Status: false,
-				Timestamp: rt,
-				IngestedFrom: e.IngestedFrom,
-				ProtocolType: protocol,
-				ExperimentID: expId,
+				Target:          dnsCryptHost,
+				Proxy:           "",
+				STime:           start,
+				ETime:           time.Now(),
+				DnsAnswer:       []byte("dnsAnswer incorrectly and unable to Pack"),
+				Status:          false,
+				Timestamp:       rt,
+				IngestedFrom:    e.IngestedFrom,
+				ProtocolType:    protocol,
+				ExperimentID:    expId,
 			}
 			channel <- exp
 			return
@@ -563,20 +555,20 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		rt.ClientDownstreamResponseTime = time.Now().UnixNano()
 		if err != nil {
 			exp := experimentResult{
-				Hostname: hostname,
-				DnsType: dnsType,
-				Key: symmetricKey,
+				Hostname:        hostname,
+				DnsType:         dnsType,
+				Key:             symmetricKey,
 				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
-				Target: dnsCryptHost,
-				Proxy: "",
-				STime: start,
-				ETime: time.Now(),
-				DnsAnswer: []byte("dnsAnswer unable to Read"),
-				Status: false,
-				Timestamp: rt,
-				IngestedFrom: e.IngestedFrom,
-				ProtocolType: protocol,
-				ExperimentID: expId,
+				Target:          dnsCryptHost,
+				Proxy:           "",
+				STime:           start,
+				ETime:           time.Now(),
+				DnsAnswer:       []byte("dnsAnswer unable to Read"),
+				Status:          false,
+				Timestamp:       rt,
+				IngestedFrom:    e.IngestedFrom,
+				ProtocolType:    protocol,
+				ExperimentID:    expId,
 			}
 			channel <- exp
 			return
@@ -589,20 +581,20 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		responseBytes, err := response.Pack()
 		if err != nil {
 			exp := experimentResult{
-				Hostname: hostname,
-				DnsType: dnsType,
-				Key: symmetricKey,
+				Hostname:        hostname,
+				DnsType:         dnsType,
+				Key:             symmetricKey,
 				TargetPublicKey: odoh.ObliviousDNSPublicKey{},
-				Target: dnsCryptHost,
-				Proxy: "",
-				STime: start,
-				ETime: time.Now(),
-				DnsAnswer: []byte("Failed to Pack the DNSAnswer"),
-				Status: false,
-				Timestamp: rt,
-				IngestedFrom: e.IngestedFrom,
-				ProtocolType: protocol,
-				ExperimentID: expId,
+				Target:          dnsCryptHost,
+				Proxy:           "",
+				STime:           start,
+				ETime:           time.Now(),
+				DnsAnswer:       []byte("Failed to Pack the DNSAnswer"),
+				Status:          false,
+				Timestamp:       rt,
+				IngestedFrom:    e.IngestedFrom,
+				ProtocolType:    protocol,
+				ExperimentID:    expId,
 			}
 			channel <- exp
 			return
@@ -611,20 +603,20 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		rt.EndTime = time.Now().UnixNano()
 
 		exp := experimentResult{
-			Hostname: hostname,
-			DnsType: dnsType,
-			Key: symmetricKey,
+			Hostname:        hostname,
+			DnsType:         dnsType,
+			Key:             symmetricKey,
 			TargetPublicKey: odoh.ObliviousDNSPublicKey{},
-			Target: dnsCryptHost,
-			Proxy: "",
-			STime: start,
-			ETime: time.Now(),
-			DnsAnswer: responseBytes,
-			Status: true,
-			Timestamp: rt,
-			IngestedFrom: e.IngestedFrom,
-			ProtocolType: protocol,
-			ExperimentID: expId,
+			Target:          dnsCryptHost,
+			Proxy:           "",
+			STime:           start,
+			ETime:           time.Now(),
+			DnsAnswer:       responseBytes,
+			Status:          true,
+			Timestamp:       rt,
+			IngestedFrom:    e.IngestedFrom,
+			ProtocolType:    protocol,
+			ExperimentID:    expId,
 		}
 		channel <- exp
 	} else {
@@ -655,11 +647,10 @@ func getTickTriggerTiming(requestsPerMinute int) float64 {
 	return intervalDuration
 }
 
-
 /*
 The benchmarkClient creates `--numclients` client instances performing `--pick` queries over `--rate` requests/minute
 uniformly distributed.
- */
+*/
 func benchmarkClient(c *cli.Context) {
 	var clientInstanceName string
 	if clientInstanceEnvironmentName := os.Getenv("CLIENT_INSTANCE_NAME"); clientInstanceEnvironmentName != "" {
@@ -685,7 +676,7 @@ func benchmarkClient(c *cli.Context) {
 	filepath := c.String("data")
 	filterCount := c.Uint64("pick")
 	numberOfParallelClients := c.Uint64("numclients")
-	requestPerMinute := c.Uint64("rate")  // requests/minute
+	requestPerMinute := c.Uint64("rate") // requests/minute
 	discoveryServiceHostname := c.String("discovery")
 	protocol := c.String("protocol")
 	tickTrigger := getTickTriggerTiming(int(requestPerMinute))
@@ -767,11 +758,9 @@ func benchmarkClient(c *cli.Context) {
 	responseChannel := make(chan experimentResult, totalResponsesNeeded)
 
 	totalQueries := len(hostnames)
-	log.Printf("Tick Trigger : %v %v", tickTrigger, time.Duration(tickTrigger) * time.Minute)
+	log.Printf("Tick Trigger : %v %v", tickTrigger, time.Duration(tickTrigger)*time.Minute)
 
 	requestPerMinuteTick := time.NewTicker(time.Duration(tickTrigger) * time.Second)
-
-	// TODO(@sudheesh): Ideally start all the clients at different durations before they enforce --rate.
 
 	for now := range requestPerMinuteTick.C {
 		log.Printf("[%v] Firing %v requests at %v\n", totalQueries, requestPerMinute, now)
@@ -785,9 +774,11 @@ func benchmarkClient(c *cli.Context) {
 				hostname := hostnames[index]
 				key := symmetricKeys[index]
 				clientUsed := state.client[clientIndex]
-				log.Printf("Choosing [Client %v] to make a query", index % int(numberOfParallelClients))
+				log.Printf("Choosing [Client %v] to make a query", index%int(numberOfParallelClients))
+				// Code fix defaults to pick Proxy/Target as the ones with the lowest latency. For randomizing use the
+				// commented section of the code in the next two lines to choose random target and proxies.
 				chosenTarget := targetWithLowestLatency //  targets[mathrand.Intn(keysAvailable)]
-				chosenProxy  := proxyWithLowestLatency  // proxies[mathrand.Intn(len(proxies))]
+				chosenProxy := proxyWithLowestLatency   // proxies[mathrand.Intn(len(proxies))]
 				pkOfTarget, err := state.GetPublicKey(chosenTarget)
 				if err != nil {
 					log.Fatalf("Unable to retrieve the PK requested")

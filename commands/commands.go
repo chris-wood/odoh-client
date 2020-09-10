@@ -19,18 +19,18 @@ var Commands = []cli.Command{
 				Value: "AAAA",
 			},
 			cli.StringFlag{
-				Name: "target",
+				Name:  "target",
 				Value: "localhost:8080",
 			},
 			cli.StringFlag{
-				Name: "proxy",
+				Name:  "proxy",
 				Value: "",
 			},
 		},
 	},
 	{
-		Name: "odoh",
-		Usage: "An oblivious application/oblivious-dns-message request",
+		Name:   "odoh",
+		Usage:  "An oblivious application/oblivious-dns-message request",
 		Action: obliviousDnsRequest,
 		Flags: []cli.Flag{
 			cli.StringFlag{
@@ -44,59 +44,74 @@ var Commands = []cli.Command{
 				Usage: "Type of DNS Question. Currently supports A, AAAA, CAA, CNAME",
 			},
 			cli.StringFlag{
-				Name: "target",
+				Name:  "target",
 				Value: "localhost:8080",
 				Usage: "Hostname:Port format declaration of the target resolver hostname",
 			},
 			cli.StringFlag{
-				Name: "proxy, p",
+				Name:  "proxy, p",
 				Usage: "Hostname:Port format declaration of the proxy hostname",
 			},
 		},
 	},
 	{
-		Name: "get-publickey",
-		Usage: "Retrieves the public key of the target resolver",
+		Name:   "get-publickey",
+		Usage:  "Retrieves the public key of the target resolver",
 		Action: getTargetPublicKey,
-		Flags: []cli.Flag {
+		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name: "ip",
+				Name:  "ip",
 				Value: "localhost:8080",
 			},
 		},
 	},
 	{
-		Name: "bench",
-		Usage: "Performs a benchmark for ODOH Target Resolver",
+		Name:   "bench",
+		Usage:  "Performs a benchmark for ODOH Target Resolver",
 		Action: benchmarkClient,
-		Flags: []cli.Flag {
+		Flags: []cli.Flag{
 			cli.StringFlag{
-				Name: "data",
+				Name:  "data",
 				Value: "dataset.csv",
 			},
 			cli.Uint64Flag{
-				Name: "pick",
+				Name:  "pick",
 				Value: 10,
 			},
 			cli.Uint64Flag{
-				Name: "numclients",
+				Name:  "numclients",
 				Value: 10,
 			},
 			cli.Uint64Flag{
-				Name: "rate", // We default to the rate per minute. Please provide this rate in req/min to make.
+				Name:  "rate", // We default to the rate per minute. Please provide this rate in req/min to make.
 				Value: 15,
 			},
 			cli.StringFlag{
-				Name: "out",
+				Name:  "out",
 				Value: "data/data-test.txt",
 			},
 			cli.StringFlag{
-				Name: "discovery",
+				Name:  "discovery",
 				Value: "odoh-discovery.crypto-team.workers.dev",
 			},
 			cli.StringFlag{
-				Name: "protocol",
+				Name:  "protocol",
 				Value: "ODOH",
+			},
+		},
+	},
+	{
+		Name:   "microbench",
+		Usage:  "Perform the Microbenchmarks for ODOH",
+		Action: microBenchmarkHandler,
+		Flags: []cli.Flag{
+			cli.IntFlag{
+				Name:  "total",
+				Value: 10,
+			},
+			cli.IntFlag{
+				Name:  "repeat",
+				Value: 10,
 			},
 		},
 	},

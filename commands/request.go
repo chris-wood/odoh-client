@@ -19,10 +19,10 @@ import (
 )
 
 const (
-	OBLIVIOUS_DOH = "application/oblivious-dns-message"
-	DOH = "application/dns-message"
+	OBLIVIOUS_DOH    = "application/oblivious-dns-message"
+	DOH              = "application/dns-message"
 	TARGET_HTTP_MODE = "https"
-	PROXY_HTTP_MODE = "https"
+	PROXY_HTTP_MODE  = "https"
 )
 
 func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte, proxy string, client *http.Client) (response *dns.Msg, err error) {
@@ -57,11 +57,11 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 
 	if useProxy != true {
 		baseurl = fmt.Sprintf("%s://%s/%s", TARGET_HTTP_MODE, targetIP, "dns-query")
-		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
+		req, err = http.NewRequest(http.MethodPost, baseurl, bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 	} else {
 		baseurl = fmt.Sprintf("%s://%s/%s", PROXY_HTTP_MODE, proxy, "proxy")
-		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
+		req, err = http.NewRequest(http.MethodPost, baseurl, bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 		queries.Add("targethost", targetIP)
 		queries.Add("targetpath", "/dns-query")
@@ -114,7 +114,7 @@ func createOdohQueryResponse(serializedOdohDnsQueryString []byte, useProxy bool,
 }
 
 func DiscoverProxiesAndTargets(hostname string, client *http.Client) (response DiscoveryServiceResponse, err error) {
-	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE + "://" + hostname, nil)
+	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE+"://"+hostname, nil)
 	if err != nil {
 		log.Fatalf("Unable to discover the proxies and targets")
 	}
@@ -134,7 +134,7 @@ func DiscoverProxiesAndTargets(hostname string, client *http.Client) (response D
 }
 
 func RetrievePublicKey(ip string, client *http.Client) (odoh.ObliviousDNSPublicKey, error) {
-	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE + "://" + ip + "/pk", nil)
+	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE+"://"+ip+"/pk", nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -152,7 +152,6 @@ func RetrievePublicKey(ip string, client *http.Client) (odoh.ObliviousDNSPublicK
 
 	return odohPublicKey, err
 }
-
 
 func QueryProxyTargetTime(proxy string, target string, pk odoh.ObliviousDNSPublicKey, client *http.Client) ([]byte, error) {
 	key := make([]byte, 16)
@@ -179,7 +178,6 @@ func QueryProxyTargetTime(proxy string, target string, pk odoh.ObliviousDNSPubli
 
 	return bodyBytes, err
 }
-
 
 func plainDnsRequest(c *cli.Context) error {
 	domainName := c.String("domain")
@@ -216,7 +214,7 @@ func obliviousDnsRequest(c *cli.Context) error {
 		useproxy = true
 	}
 
-	key := make([]byte, 16)  // Hardcoding these values for specifically AES_GCM128
+	key := make([]byte, 16) // Hardcoding these values for specifically AES_GCM128
 	_, err := rand.Read(key)
 	if err != nil {
 		log.Fatalf("Unable to read random bytes to make a symmetric key.\n")
@@ -304,10 +302,10 @@ func getTargetPublicKey(c *cli.Context) error {
 	client := http.Client{}
 	targetIP := c.String("ip")
 	/*
-	Ideally, this procedure will be replaced by a DNSSEC validation step followed by the retrieval of the PublicKey
-	from the SVCB or HTTPSSVC records of the target resolver by the client. For now, we bypass this procedure and
-	implement a procedure to retrieve the ObliviousDNSPublicKey which is used for encryption.
-	 */
+		Ideally, this procedure will be replaced by a DNSSEC validation step followed by the retrieval of the PublicKey
+		from the SVCB or HTTPSSVC records of the target resolver by the client. For now, we bypass this procedure and
+		implement a procedure to retrieve the ObliviousDNSPublicKey which is used for encryption.
+	*/
 	fmt.Printf("Retrieving the Public Key from [%v]\n", targetIP)
 
 	odohPublicKeyBytes, _ := RetrievePublicKey(targetIP, &client)

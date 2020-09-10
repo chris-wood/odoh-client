@@ -14,8 +14,8 @@ import (
 
 type telemetry struct {
 	sync.RWMutex
-	esClient *elasticsearch.Client
-	logClient *logging.Client
+	esClient    *elasticsearch.Client
+	logClient   *logging.Client
 	cloudlogger *logging.Logger
 }
 
@@ -27,7 +27,7 @@ var telemetryInstance telemetry
 
 func getTelemetryInstance() *telemetry {
 	elasticsearchTransport := elasticsearch.Config{
-		Addresses: []string {
+		Addresses: []string{
 			"http://localhost:9200",
 		},
 		Transport: &http.Transport{
@@ -88,8 +88,8 @@ func (t *telemetry) streamLogsToELK(dataItems []string) {
 		go func(i int, message string) {
 			defer wg.Done()
 			req := esapi.IndexRequest{
-				Index: INDEX,
-				Body: strings.NewReader(message),
+				Index:   INDEX,
+				Body:    strings.NewReader(message),
 				Refresh: "true",
 			}
 
