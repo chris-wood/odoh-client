@@ -47,11 +47,15 @@ github.com/chris-wood/odoh v0.0.0-20200713191747-dca7f5ffc0b3 h1:Hobxm0xGev00Kbh
 github.com/chris-wood/odoh v0.0.0-20200713191747-dca7f5ffc0b3/go.mod h1:uj93pPykgQ+WC/h9KQDNW6o76g2l28stR+UNQEOj1Uc=
 github.com/chris-wood/odoh v0.0.0-20200904213540-aa350f1a2166 h1:/iMLgXmLJwGKU2pHuaAiJ5uRScsD1oV4+m2l9BHApEk=
 github.com/chris-wood/odoh v0.0.0-20200904213540-aa350f1a2166/go.mod h1:uj93pPykgQ+WC/h9KQDNW6o76g2l28stR+UNQEOj1Uc=
+github.com/chris-wood/odoh v0.0.0-20201007220552-f275ac93c159 h1:rBI/yxBjXFwZO/PC6W0mHKPLkWTSdAnkWX7jF6zPkKg=
+github.com/chris-wood/odoh v0.0.0-20201007220552-f275ac93c159/go.mod h1:2NfMvn83If2K1Tac7Tn6ci5c96Wix/W7KsckAlyVK2E=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
 github.com/cisco/go-hpke v0.0.0-20200710171132-37d332d5f613 h1:u9M24d+jQHVN+NfFmEaprJgqPIgJCYvBenR1T216ep0=
 github.com/cisco/go-hpke v0.0.0-20200710171132-37d332d5f613/go.mod h1:7ykSQZaBVJLIRoJ7OMiJgpdOD74cTHdXRo6XPMIfu20=
+github.com/cisco/go-hpke v0.0.0-20200904203048-9e7d3e90b7c3 h1:3PT/MB4kSeuHr78O8Dkf538V7HrtdckYyi4STn8iJYM=
+github.com/cisco/go-hpke v0.0.0-20200904203048-9e7d3e90b7c3/go.mod h1:AyK7f6CWiLAvOFmAyCEF5xDN51zS6PIZgj3Qq7hla1Y=
 github.com/cisco/go-tls-syntax v0.0.0-20200617162716-46b0cfb76b9b h1:Ves2turKTX7zruivAcUOQg155xggcbv3suVdbKCBQNM=
 github.com/cisco/go-tls-syntax v0.0.0-20200617162716-46b0cfb76b9b/go.mod h1:0AZAV7lYvynZQ5ErHlGMKH+4QYMyNCFd+AiL9MlrCYA=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
@@ -171,6 +175,8 @@ golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 h1:vEg9joUBmeBcK9iSJftGNf
 golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 h1:psW17arqaxU48Z5kZ0CQnkZWQJsqcURM6tKiBApRjXI=
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
+golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a h1:vclmkQCjlDX5OydZ9wv8rBCcS0QyQY66Mpf/7BZbInM=
+golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190306152737-a1d7652674e8/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190510132918-efd6b22b2522/go.mod h1:ZjyILWgesfNpC6sMxTJOJm9Kp84zZh5NQWvqDGG3Qr8=

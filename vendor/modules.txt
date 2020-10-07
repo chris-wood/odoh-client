@@ -12,10 +12,10 @@ git.schwanenlied.me/yawning/x448.git
 # github.com/chris-wood/dns v0.0.0-20161202223856-f4d2b086946a
 ## explicit
 github.com/chris-wood/dns
-# github.com/chris-wood/odoh v0.0.0-20200904213540-aa350f1a2166
+# github.com/chris-wood/odoh v0.0.0-20201007220552-f275ac93c159
 ## explicit
 github.com/chris-wood/odoh
-# github.com/cisco/go-hpke v0.0.0-20200710171132-37d332d5f613
+# github.com/cisco/go-hpke v0.0.0-20200904203048-9e7d3e90b7c3
 ## explicit
 github.com/cisco/go-hpke
 # github.com/cisco/go-tls-syntax v0.0.0-20200617162716-46b0cfb76b9b
@@ -81,7 +81,7 @@ go.opencensus.io/trace
 go.opencensus.io/trace/internal
 go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
-# golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+# golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/curve25519
