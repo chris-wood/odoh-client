@@ -1,11 +1,10 @@
 package commands
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/chris-wood/dns"
+	"github.com/miekg/dns"
 	"github.com/chris-wood/odoh"
 	"github.com/urfave/cli"
 	"log"
@@ -18,15 +17,13 @@ import (
 // This runningTime structure contains the epoch timestamps for each of the operations
 // taking place. The explanations are as follows:
 // 1. Start => Epoch time at which the client starts to prepare the question
-// 2. ClientHashingOverheadTime => Epoch time at which the client hashes the symmetric key used for request identification.
-// 3. ClientQueryEncryptionTime => Epoch time at which the client completes the encryption and serialization of the question.
-// 4. ClientUpstreamRequestTime => Epoch time indicating the start of the network request.
-// 5. ClientDownstreamResponseTime => Epoch time indicating the receipt of the response and deserialization into ObliviousDNSMessage
-// 6. EndTime => Epoch time indicating the end of all tasks for the request.
+// 2. ClientQueryEncryptionTime => Epoch time at which the client completes the encryption and serialization of the question.
+// 3. ClientUpstreamRequestTime => Epoch time indicating the start of the network request.
+// 4. ClientDownstreamResponseTime => Epoch time indicating the receipt of the response and deserialization into ObliviousDNSMessage
+// 5. EndTime => Epoch time indicating the end of all tasks for the request.
 // NOTE: All timestamps are stored in NanoSecond granularity and need to be converted into microseconds (/1000.0) or milliseconds (/1000.0^2)
 type runningTime struct {
 	Start                        int64
-	ClientHashingOverheadTime    int64
 	ClientQueryEncryptionTime    int64
 	ClientUpstreamRequestTime    int64
 	ClientDownstreamResponseTime int64
@@ -38,8 +35,7 @@ type experiment struct {
 	ExperimentID    string
 	Hostname        string
 	DnsType         uint16
-	Key             []byte
-	TargetPublicKey odoh.ObliviousDNSPublicKey
+	TargetPublicKey odoh.ObliviousDoHConfigContents
 	// Instrumentation
 	Proxy       string
 	Target      string
@@ -50,8 +46,7 @@ type experiment struct {
 type experimentResult struct {
 	Hostname        string
 	DnsType         uint16
-	Key             []byte
-	TargetPublicKey odoh.ObliviousDNSPublicKey
+	TargetPublicKey odoh.ObliviousDoHConfigContents
 	// Timing parameters
 	STime time.Time
 	ETime time.Time
@@ -83,26 +78,9 @@ type DiscoveryServiceResponse struct {
 	Targets []string `json:"targets"`
 }
 
-func prepareSymmetricKeys(quantity int) [][]byte {
-	// Assume that all the keys necessary for the experiment are 16 bytes.
-	result := make([][]byte, quantity)
-	start := time.Now()
-	for i := 0; i < quantity; i++ {
-		key := make([]byte, 16)
-		_, err := rand.Read(key)
-		if err != nil {
-			log.Fatalf("Unable to read random bytes to make a symmetric Key.\n")
-		}
-		result[i] = key
-	}
-	log.Printf("Time (ms) to generate %v symmetric keys : [%v]", len(result), time.Since(start).Microseconds())
-	return result
-}
-
 func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 	hostname := e.Hostname
 	dnsType := e.DnsType
-	symmetricKey := e.Key
 	targetPublicKey := e.TargetPublicKey
 	proxy := e.Proxy
 	target := e.Target
@@ -118,10 +96,19 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 
 	start := time.Now()
 	rt.Start = start.UnixNano()
-	requestId := sha256.Sum256(symmetricKey)
-	hashingTime := time.Now().UnixNano()
-	rt.ClientHashingOverheadTime = hashingTime
-	serializedODoHQueryMessage, err := prepareOdohQuestion(hostname, dnsType, symmetricKey, targetPublicKey)
+
+	dnsQuery := new(dns.Msg)
+	dnsQuery.SetQuestion(hostname, dnsType)
+	packedDnsQuery, err := dnsQuery.Pack()
+	if err != nil {
+		log.Fatalf("dns.Pack() failed: %v", err)
+	}
+
+	odohQuery, queryContext, err := createOdohQuestion(packedDnsQuery, targetPublicKey)
+	if err != nil {
+		log.Fatalf("createOdohQuestion failed: %v", err)
+	}
+
 	timeToPrepareQuestionAndSerialize := time.Now().UnixNano()
 	rt.ClientQueryEncryptionTime = timeToPrepareQuestionAndSerialize
 	if err != nil {
@@ -129,16 +116,15 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 	}
 	requestTime := time.Now().UnixNano()
 	rt.ClientUpstreamRequestTime = requestTime
-	odohMessage, err := createOdohQueryResponse(serializedODoHQueryMessage, shouldUseProxy, target, proxy, client)
+	odohMessage, err := resolveObliviousQuery(odohQuery, shouldUseProxy, target, proxy, client)
 
 	responseTime := time.Now().UnixNano()
 	rt.ClientDownstreamResponseTime = responseTime
 
-	if err != nil || odohMessage == nil {
+	if err != nil {
 		exp := experimentResult{
 			Hostname:        hostname,
 			DnsType:         dnsType,
-			Key:             symmetricKey,
 			TargetPublicKey: targetPublicKey,
 			Target:          target,
 			Proxy:           proxy,
@@ -155,15 +141,14 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		return
 	}
 
-	log.Printf("[DNSANSWER] %v %v\n", odohMessage, symmetricKey)
-	dnsAnswer, err := validateEncryptedResponse(odohMessage, symmetricKey)
+	log.Printf("[DNSANSWER] %v \n", odohMessage)
+	dnsAnswer, err := validateEncryptedResponse(odohMessage, queryContext)
 	validationTime := time.Now().UnixNano()
 	rt.ClientAnswerDecryptionTime = validationTime
 	if err != nil || dnsAnswer == nil {
 		exp := experimentResult{
 			Hostname:        hostname,
 			DnsType:         dnsType,
-			Key:             symmetricKey,
 			TargetPublicKey: targetPublicKey,
 			Target:          target,
 			Proxy:           proxy,
@@ -183,34 +168,35 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 	endTime := time.Now().UnixNano()
 	rt.EndTime = endTime
 
+	requestId := make([]byte, 2)
+	binary.BigEndian.PutUint16(requestId, uint16(dnsQuery.Id))
+
 	log.Printf("=======ODOH Request for [%v]========\n", hostname)
-	log.Printf("Request ID : [%x]\n", requestId[:])
+	log.Printf("Request ID : [%x]\n", requestId)
 	log.Printf("Start Time : [%v]\n", start.UnixNano())
-	log.Printf("Time @ Hash the Symmetric Key as ID: [%v]\n", hashingTime)
 	log.Printf("Time @ Prepare Question and Serialize : [%v]\n", timeToPrepareQuestionAndSerialize)
 	log.Printf("Time @ Starting ODOH Request  : [%v]\n", requestTime)
 	log.Printf("Time @ Received ODOH Response : [%v]\n", responseTime)
 	log.Printf("Time @ Finished Validation Response : [%v]\n", validationTime)
 	log.Printf("DNS Answer : [%v]\n", dnsAnswerBytes)
 	log.Printf("====================================")
-	var requestIDString []byte = requestId[:]
-	log.Printf("Requested ID : [%s]", hex.EncodeToString(requestIDString))
+	requestIDString := hex.EncodeToString(requestId)
+	log.Printf("Requested ID : [%s]", requestIDString)
 	exp := experimentResult{
 		Hostname:        hostname,
 		DnsType:         dnsType,
-		Key:             symmetricKey,
 		TargetPublicKey: targetPublicKey,
 		// Overall timing parameters
 		STime: start,
 		ETime: time.Now(),
 		// Instrumentation
-		RequestID:   hex.EncodeToString(requestIDString),
-		DnsQuestion: serializedODoHQueryMessage,
+		RequestID:   requestIDString,
+		DnsQuestion: odohMessage.Marshal(),
 		DnsAnswer:   dnsAnswerBytes,
 		Proxy:       proxy,
 		Target:      target,
 		Timestamp:   rt,
-		// experiment status
+		// Experiment status
 		Status: true,
 		IngestedFrom: e.IngestedFrom,
 		ProtocolType: "ODOH",
@@ -244,10 +230,8 @@ func getTickTriggerTiming(requestsPerMinute int) float64 {
 }
 
 
-/*
-The benchmarkClient creates `--numclients` client instances performing `--pick` queries over `--rate` requests/minute
-uniformly distributed.
- */
+// The benchmarkClient creates `--numclients` client instances performing `--pick` 
+// queries over `--rate` requests/minute uniformly distributed.
 func benchmarkClient(c *cli.Context) {
 	var clientInstanceName string
 	if clientInstanceEnvironmentName := os.Getenv("CLIENT_INSTANCE_NAME"); clientInstanceEnvironmentName != "" {
@@ -297,7 +281,7 @@ func benchmarkClient(c *cli.Context) {
 	// Create network requests concurrently.
 	const dnsMessageType = dns.TypeA
 
-	availableServices, err := DiscoverProxiesAndTargets(discoveryServiceHostname, instance.client[0])
+	availableServices, err := fetchProxiesAndTargets(discoveryServiceHostname, instance.client[0])
 	if err != nil {
 		log.Fatalf("Unable to discover the services available.")
 	}
@@ -305,22 +289,17 @@ func benchmarkClient(c *cli.Context) {
 	// Obtain all the keys for the targets.
 	targets := availableServices.Targets
 	proxies := availableServices.Proxies
-	// TODO(@sudheesh): Discover the targets from a service.
 	for _, target := range targets {
-		pkbytes, err := RetrievePublicKey(target, instance.client[0])
+		config, err := fetchTargetConfig(target, instance.client[0])
 		if err != nil {
 			log.Fatalf("Unable to obtain the public Key from %v. Error %v", target, err)
 		}
-		state.InsertKey(target, pkbytes)
+		state.InsertKey(target, config.Contents)
 	}
 
 	keysAvailable := state.TotalNumberOfTargets()
 	log.Printf("%v targets available to choose from.", keysAvailable)
 	log.Printf("%v proxies available to choose from.", len(proxies))
-
-	// Part 1 : Initialize and Prepare the Keys to the request.
-	symmetricKeys := prepareSymmetricKeys(len(hostnames))
-	log.Printf("%v symmetric keys chosen", len(symmetricKeys))
 
 	start := time.Now()
 	responseChannel := make(chan experimentResult, totalResponsesNeeded)
@@ -342,12 +321,11 @@ func benchmarkClient(c *cli.Context) {
 		for index := startIndex; index >= endIndex; index-- {
 			for clientIndex := 0; clientIndex < int(numberOfParallelClients); clientIndex++ {
 				hostname := hostnames[index]
-				key := symmetricKeys[index]
 				clientUsed := state.client[clientIndex]
 				log.Printf("Choosing [Client %v] to make a query", index % int(numberOfParallelClients))
 				chosenTarget := targets[mathrand.Intn(keysAvailable)]
 				chosenProxy  := proxies[mathrand.Intn(len(proxies))]
-				pkOfTarget, err := state.GetPublicKey(chosenTarget)
+				targetConfigContents, err := state.GetTargetConfigContents(chosenTarget)
 				if err != nil {
 					log.Fatalf("Unable to retrieve the PK requested")
 				}
@@ -355,8 +333,7 @@ func benchmarkClient(c *cli.Context) {
 					ExperimentID:    experimentID,
 					Hostname:        hostname,
 					DnsType:         dnsMessageType,
-					Key:             key,
-					TargetPublicKey: pkOfTarget,
+					TargetPublicKey: targetConfigContents,
 					Target:          chosenTarget,
 					Proxy:           chosenProxy,
 					IngestedFrom:    clientInstanceName,
