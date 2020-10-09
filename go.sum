@@ -40,8 +40,8 @@ git.schwanenlied.me/yawning/x448.git v0.0.0-20170617130356-01b048fb03d6/go.mod h
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
-github.com/chris-wood/odoh v0.0.0-20201008205909-8c24683e5a31 h1:BGcbEXjO3dE0P4g1Sd9CLSLc1ne/QE5WqaTVFLvQ8yw=
-github.com/chris-wood/odoh v0.0.0-20201008205909-8c24683e5a31/go.mod h1:2NfMvn83If2K1Tac7Tn6ci5c96Wix/W7KsckAlyVK2E=
+github.com/chris-wood/odoh v0.0.0-20201009212040-8b3f18f7fb29 h1:kBCnZW7SWp1jwVel92hFRvQK35RwbmweFg2A8j004WE=
+github.com/chris-wood/odoh v0.0.0-20201009212040-8b3f18f7fb29/go.mod h1:2NfMvn83If2K1Tac7Tn6ci5c96Wix/W7KsckAlyVK2E=
 github.com/chzyer/logex v1.1.10/go.mod h1:+Ywpsq7O8HXn0nuIou7OrIPyXbp3wmkHB+jjWRnGsAI=
 github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e/go.mod h1:nSuG5e5PlCu98SY8svDHJxuZscDgtXS6KTTbou5AhLI=
 github.com/chzyer/test v0.0.0-20180213035817-a1ea475d72b1/go.mod h1:Q3SI9o4m/ZMnBNeIyt5eFwwo7qiLfzFZmjNmxjkiQlU=
