@@ -3,7 +3,6 @@ package commands
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,7 +17,7 @@ import (
 
 func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte) (response *dns.Msg, err error) {
 	client := http.Client{}
-	queryUrl := fmt.Sprintf("https://%s/dns-query", hostname)
+	queryUrl := fmt.Sprintf(TARGET_HTTP_MODE + "://%s/dns-query", hostname)
 	req, err := http.NewRequest(http.MethodGet, queryUrl, nil)
 	if err != nil {
 		log.Fatalln(err)
@@ -49,7 +48,6 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 	var queries url.Values
 
 	if useProxy != true {
-		fmt.Printf("Preparing the query to dns-query endpoint with %v data\n.", serializedBody)
 		baseurl = fmt.Sprintf("%s://%s/%s", TARGET_HTTP_MODE, targetIP, "dns-query")
 		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
@@ -87,9 +85,6 @@ func resolveObliviousQuery(query odoh.ObliviousDNSMessage, useProxy bool, target
 	if responseHeader != OBLIVIOUS_DOH {
 		return odoh.ObliviousDNSMessage{}, errors.New(fmt.Sprintf("Did not obtain the correct headers from %v with response %v", targetIP, string(bodyBytes)))
 	}
-
-	hexBodyBytes := hex.EncodeToString(bodyBytes)
-	log.Printf("[ODOH] Hex Encrypted Response : %v\n", hexBodyBytes)
 
 	odohQueryResponse, err := odoh.UnmarshalDNSMessage(bodyBytes)
 	if err != nil {

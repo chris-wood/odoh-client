@@ -5,7 +5,7 @@ go 1.14
 require (
 	cloud.google.com/go v0.61.0 // indirect
 	cloud.google.com/go/logging v1.0.0
-	github.com/chris-wood/odoh v0.0.0-20201007221837-47d11d1939bc
+	github.com/chris-wood/odoh v0.0.0-20201008205909-8c24683e5a31
 	github.com/cisco/go-hpke v0.0.0-20200904203048-9e7d3e90b7c3
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20200716073932-4f0b75746dc1
 	github.com/google/go-cmp v0.5.1 // indirect
