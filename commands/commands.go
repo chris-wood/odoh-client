@@ -7,7 +7,7 @@ import (
 var Commands = []cli.Command{
 	{
 		Name:   "doh",
-		Usage:  "A plain application/dns-message request",
+		Usage:  "An application/dns-message request",
 		Action: plainDnsRequest,
 		Flags: []cli.Flag{
 			cli.StringFlag{
@@ -26,7 +26,7 @@ var Commands = []cli.Command{
 	},
 	{
 		Name: "odoh",
-		Usage: "An oblivious application/oblivious-dns-message request",
+		Usage: "An application/oblivious-dns-message request",
 		Action: obliviousDnsRequest,
 		Flags: []cli.Flag{
 			cli.StringFlag{
@@ -51,13 +51,32 @@ var Commands = []cli.Command{
 		},
 	},
 	{
-		Name: "get-publickey",
-		Usage: "Retrieves the public key of the target resolver",
-		Action: getTargetPublicKey,
+		Name: "odohconfig-fetch",
+		Usage: "Retrieves the ObliviousDoHConfig of the target resolver",
+		Action: getTargetConfig,
 		Flags: []cli.Flag {
 			cli.StringFlag{
-				Name: "ip",
+				Name: "target",
 				Value: "localhost:8080",
+			},
+		},
+	},
+	{
+		Name: "odohconfig-mint",
+		Usage: "Mints a singleton ObliviousDoHConfig with the specified (KEM, KDF, AEAD) HPKE ciphersuite",
+		Action: createConfigurations,
+		Flags: []cli.Flag {
+			cli.StringFlag{
+				Name: "kemid",
+				Value: "32",
+			},
+			cli.StringFlag{
+				Name: "kdfid",
+				Value: "1",
+			},
+			cli.StringFlag{
+				Name: "aeadid",
+				Value: "1",
 			},
 		},
 	},
