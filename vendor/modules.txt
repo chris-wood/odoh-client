@@ -9,7 +9,7 @@ cloud.google.com/go/logging/apiv2
 cloud.google.com/go/logging/internal
 # git.schwanenlied.me/yawning/x448.git v0.0.0-20170617130356-01b048fb03d6
 git.schwanenlied.me/yawning/x448.git
-# github.com/chris-wood/odoh v0.0.0-20201009212040-8b3f18f7fb29
+# github.com/chris-wood/odoh v0.1.2
 ## explicit
 github.com/chris-wood/odoh
 # github.com/cisco/go-hpke v0.0.0-20200904203048-9e7d3e90b7c3
