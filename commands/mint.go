@@ -43,10 +43,11 @@ func createConfigurations(c *cli.Context) error {
 	}
 
 	config := odoh.CreateObliviousDoHConfig(configContents)
+	configs := odoh.CreateObliviousDoHConfigs([]odoh.ObliviousDoHConfig{config})
 
 	configsBlock := &pem.Block{
 		Type: "ODOH CONFIGS",
-		Bytes: config.Marshal(),
+		Bytes: configs.Marshal(),
 	}
 	if err := pem.Encode(os.Stdout, configsBlock); err != nil {
 		log.Fatal(err)
