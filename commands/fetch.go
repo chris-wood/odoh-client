@@ -8,22 +8,22 @@ import (
 	"net/http"
 )
 
-func fetchTargetConfig(targetName string, client *http.Client) (odoh.ObliviousDoHConfig, error) {
+func fetchTargetConfig(targetName string, client *http.Client) (odoh.ObliviousDoHConfigs, error) {
 	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE + "://" + targetName + ODOH_CONFIG_WELLKNOWN_URL, nil)
 	if err != nil {
-		return odoh.ObliviousDoHConfig{}, err
+		return odoh.ObliviousDoHConfigs{}, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return odoh.ObliviousDoHConfig{}, err
+		return odoh.ObliviousDoHConfigs{}, err
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return odoh.ObliviousDoHConfig{}, err
+		return odoh.ObliviousDoHConfigs{}, err
 	}
 
-	return odoh.UnmarshalObliviousDoHConfig(bodyBytes)
+	return odoh.UnmarshalObliviousDoHConfigs(bodyBytes)
 }
 
 func getTargetConfig(c *cli.Context) error {

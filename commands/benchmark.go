@@ -290,10 +290,11 @@ func benchmarkClient(c *cli.Context) {
 	targets := availableServices.Targets
 	proxies := availableServices.Proxies
 	for _, target := range targets {
-		config, err := fetchTargetConfig(target, instance.client[0])
+		configs, err := fetchTargetConfig(target, instance.client[0])
 		if err != nil {
-			log.Fatalf("Unable to obtain the public Key from %v. Error %v", target, err)
+			log.Fatalf("Unable to obtain the ObliviousDoHConfigs from %v. Error %v", target, err)
 		}
+		config := configs.Configs[0]
 		state.InsertKey(target, config.Contents)
 	}
 

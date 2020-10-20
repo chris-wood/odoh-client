@@ -153,10 +153,11 @@ func obliviousDnsRequest(c *cli.Context) error {
 	}
 	client := http.Client{}
 
-	odohConfig, err := fetchTargetConfig(targetIP, &client)
+	odohConfigs, err := fetchTargetConfig(targetIP, &client)
 	if err != nil {
 		return err
 	}
+	odohConfig := odohConfigs.Configs[0]
 
 	dnsType := dnsQueryStringToType(dnsTypeString)
 
