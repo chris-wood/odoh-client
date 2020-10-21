@@ -184,7 +184,6 @@ func obliviousDnsRequest(c *cli.Context) error {
 	}
 
 	fmt.Println(dnsResponse)
-
 	return nil
 }
 
