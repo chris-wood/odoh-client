@@ -151,9 +151,8 @@ func obliviousDnsRequest(c *cli.Context) error {
 	if useproxy == true {
 		fmt.Printf("Using %v as the proxy to send the ODOH Message\n", proxy)
 	}
-	client := http.Client{}
-
-	odohConfigs, err := fetchTargetConfig(targetIP, &client)
+	
+	odohConfigs, err := fetchTargetConfigs(targetIP)
 	if err != nil {
 		return err
 	}
@@ -173,6 +172,7 @@ func obliviousDnsRequest(c *cli.Context) error {
 		return err
 	}
 
+	client := http.Client{}
 	odohMessage, err := resolveObliviousQuery(odohQuery, useproxy, targetIP, proxy, &client)
 	if err != nil {
 		return err

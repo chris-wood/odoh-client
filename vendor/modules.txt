@@ -51,7 +51,7 @@ github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
 # github.com/googleapis/gax-go/v2 v2.0.5
 github.com/googleapis/gax-go/v2
-# github.com/miekg/dns v1.1.29
+# github.com/miekg/dns v1.1.32
 ## explicit
 github.com/miekg/dns
 # github.com/russross/blackfriday/v2 v2.0.1

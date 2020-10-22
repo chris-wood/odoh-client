@@ -290,7 +290,7 @@ func benchmarkClient(c *cli.Context) {
 	targets := availableServices.Targets
 	proxies := availableServices.Proxies
 	for _, target := range targets {
-		configs, err := fetchTargetConfig(target, instance.client[0])
+		configs, err := fetchTargetConfigs(target)
 		if err != nil {
 			log.Fatalf("Unable to obtain the ObliviousDoHConfigs from %v. Error %v", target, err)
 		}

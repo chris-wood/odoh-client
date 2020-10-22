@@ -52,8 +52,8 @@ var Commands = []cli.Command{
 	},
 	{
 		Name: "odohconfig-fetch",
-		Usage: "Retrieves the ObliviousDoHConfig of the target resolver",
-		Action: getTargetConfig,
+		Usage: "Retrieves the ObliviousDoHConfigs of the target resolver",
+		Action: getTargetConfigs,
 		Flags: []cli.Flag {
 			cli.StringFlag{
 				Name: "target",
