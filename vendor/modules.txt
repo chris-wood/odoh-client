@@ -9,9 +9,6 @@ cloud.google.com/go/logging/apiv2
 cloud.google.com/go/logging/internal
 # git.schwanenlied.me/yawning/x448.git v0.0.0-20170617130356-01b048fb03d6
 git.schwanenlied.me/yawning/x448.git
-# github.com/chris-wood/odoh v0.1.2
-## explicit
-github.com/chris-wood/odoh
 # github.com/cisco/go-hpke v0.0.0-20200904203048-9e7d3e90b7c3
 ## explicit
 github.com/cisco/go-hpke
@@ -23,6 +20,9 @@ github.com/cloudflare/circl/dh/sidh/internal/common
 github.com/cloudflare/circl/dh/sidh/internal/p503
 github.com/cloudflare/circl/dh/sidh/internal/p751
 github.com/cloudflare/circl/dh/sidh/internal/shake
+# github.com/cloudflare/odoh-go v0.1.2
+## explicit
+github.com/cloudflare/odoh-go
 # github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/elastic/go-elasticsearch/v8 v8.0.0-20200716073932-4f0b75746dc1

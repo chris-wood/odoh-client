@@ -2,7 +2,7 @@ package commands
 
 import (
 	"errors"
-	"github.com/chris-wood/odoh"
+	odoh "github.com/cloudflare/odoh-go"
 	"net/http"
 	"sync"
 	"time"
@@ -11,7 +11,7 @@ import (
 type state struct {
 	sync.RWMutex
 	configContents map[string]odoh.ObliviousDoHConfigContents
-	client []*http.Client
+	client         []*http.Client
 }
 
 var instance state

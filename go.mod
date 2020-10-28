@@ -5,8 +5,8 @@ go 1.14
 require (
 	cloud.google.com/go v0.61.0 // indirect
 	cloud.google.com/go/logging v1.0.0
-	github.com/chris-wood/odoh v0.1.2
 	github.com/cisco/go-hpke v0.0.0-20200904203048-9e7d3e90b7c3
+	github.com/cloudflare/odoh-go v0.1.2
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20200716073932-4f0b75746dc1
 	github.com/google/go-cmp v0.5.1 // indirect
 	github.com/miekg/dns v1.1.32
