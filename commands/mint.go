@@ -1,14 +1,14 @@
 package commands
 
 import (
-	"os"
-	"log"
 	"crypto/rand"
-	"strconv"
 	"encoding/pem"
-	"github.com/urfave/cli"
-	"github.com/chris-wood/odoh"
 	hpke "github.com/cisco/go-hpke"
+	odoh "github.com/cloudflare/odoh-go"
+	"github.com/urfave/cli"
+	"log"
+	"os"
+	"strconv"
 )
 
 func createConfigurations(c *cli.Context) error {
@@ -45,7 +45,7 @@ func createConfigurations(c *cli.Context) error {
 	config := odoh.CreateObliviousDoHConfig(configContents)
 
 	configsBlock := &pem.Block{
-		Type: "ODOH CONFIGS",
+		Type:  "ODOH CONFIGS",
 		Bytes: config.Marshal(),
 	}
 	if err := pem.Encode(os.Stdout, configsBlock); err != nil {
@@ -53,7 +53,7 @@ func createConfigurations(c *cli.Context) error {
 	}
 
 	privateConfigsBlock := &pem.Block{
-		Type: "ODOH PRIVATE KEY",
+		Type:  "ODOH PRIVATE KEY",
 		Bytes: suite.KEM.SerializePrivate(privateKey),
 	}
 	if err := pem.Encode(os.Stdout, privateConfigsBlock); err != nil {

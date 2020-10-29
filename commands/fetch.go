@@ -1,19 +1,22 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
-	"github.com/chris-wood/odoh"
+	odoh "github.com/cloudflare/odoh-go"
+	"github.com/miekg/dns"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"net/http"
 )
 
-func fetchTargetConfig(targetName string, client *http.Client) (odoh.ObliviousDoHConfigs, error) {
-	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE + "://" + targetName + ODOH_CONFIG_WELLKNOWN_URL, nil)
+func fetchTargetConfigsFromWellKnown(targetName string) (odoh.ObliviousDoHConfigs, error) {
+	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE+"://"+targetName+ODOH_CONFIG_WELLKNOWN_URL, nil)
 	if err != nil {
 		return odoh.ObliviousDoHConfigs{}, err
 	}
 
+	client := http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return odoh.ObliviousDoHConfigs{}, err
@@ -26,15 +29,71 @@ func fetchTargetConfig(targetName string, client *http.Client) (odoh.ObliviousDo
 	return odoh.UnmarshalObliviousDoHConfigs(bodyBytes)
 }
 
-func getTargetConfig(c *cli.Context) error {
-	client := http.Client{}
-	targetName := c.String("target")
+func fetchTargetConfigsFromDNS(targetName string) (odoh.ObliviousDoHConfigs, error) {
+	dnsQuery := new(dns.Msg)
+	dnsQuery.SetQuestion(targetName, dns.TypeHTTPS)
+	dnsQuery.RecursionDesired = true
+	packedDnsQuery, err := dnsQuery.Pack()
+	if err != nil {
+		return odoh.ObliviousDoHConfigs{}, err
+	}
 
-	odohConfig, err := fetchTargetConfig(targetName, &client)
+	response, err := createPlainQueryResponse(DEFAULT_DOH_SERVER, packedDnsQuery)
+	if err != nil {
+		return odoh.ObliviousDoHConfigs{}, err
+	}
+
+	if response.Rcode != dns.RcodeSuccess {
+		return odoh.ObliviousDoHConfigs{}, errors.New(fmt.Sprintf("DNS response failure: %v", response.Rcode))
+	}
+
+	for _, answer := range response.Answer {
+		httpsResponse, ok := answer.(*dns.HTTPS)
+		if ok {
+			for _, value := range httpsResponse.Value {
+				if value.Key() == 32769 {
+					parameter, ok := value.(*dns.SVCBLocal)
+					if ok {
+						odohConfigs, err := odoh.UnmarshalObliviousDoHConfigs(parameter.Data)
+						if err == nil {
+							return odohConfigs, nil
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return odoh.ObliviousDoHConfigs{}, nil
+}
+
+func fetchTargetConfigs(targetName string) (odoh.ObliviousDoHConfigs, error) {
+	odohConfigs, err := fetchTargetConfigsFromDNS(targetName)
+	if err == nil {
+		return odohConfigs, err
+	}
+
+	// Fall back to the well-known endpoint if we can't read from DNS
+	return fetchTargetConfigsFromWellKnown(targetName)
+}
+
+func getTargetConfigs(c *cli.Context) error {
+	targetName := c.String("target")
+	pretty := c.Bool("pretty")
+
+	odohConfigs, err := fetchTargetConfigs(targetName)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%x", odohConfig.Marshal())
+	if pretty {
+		fmt.Println("ObliviousDoHConfigs:")
+		for i, config := range odohConfigs.Configs {
+			configContents := config.Contents
+			fmt.Printf("  Config %d: Version(0x%04x), KEM(0x%04x), KDF(0x%04x), AEAD(0x%04x)\n", (i + 1), config.Version, configContents.KemID, configContents.KdfID, configContents.AeadID)
+		}
+	} else {
+		fmt.Printf("%x", odohConfigs.Marshal())
+	}
 	return nil
 }

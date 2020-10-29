@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	odoh "github.com/cloudflare/odoh-go"
 	"github.com/miekg/dns"
-	"github.com/chris-wood/odoh"
 	"github.com/urfave/cli"
 	"io/ioutil"
 	"log"
@@ -17,7 +17,7 @@ import (
 
 func createPlainQueryResponse(hostname string, serializedDnsQueryString []byte) (response *dns.Msg, err error) {
 	client := http.Client{}
-	queryUrl := fmt.Sprintf(TARGET_HTTP_MODE + "://%s/dns-query", hostname)
+	queryUrl := fmt.Sprintf(TARGET_HTTP_MODE+"://%s/dns-query", hostname)
 	req, err := http.NewRequest(http.MethodGet, queryUrl, nil)
 	if err != nil {
 		log.Fatalln(err)
@@ -49,11 +49,11 @@ func prepareHttpRequest(serializedBody []byte, useProxy bool, targetIP string, p
 
 	if useProxy != true {
 		baseurl = fmt.Sprintf("%s://%s/%s", TARGET_HTTP_MODE, targetIP, "dns-query")
-		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
+		req, err = http.NewRequest(http.MethodPost, baseurl, bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 	} else {
 		baseurl = fmt.Sprintf("%s://%s/%s", PROXY_HTTP_MODE, proxy, "proxy")
-		req, err = http.NewRequest(http.MethodPost, baseurl,  bytes.NewBuffer(serializedBody))
+		req, err = http.NewRequest(http.MethodPost, baseurl, bytes.NewBuffer(serializedBody))
 		queries = req.URL.Query()
 		queries.Add("targethost", targetIP)
 		queries.Add("targetpath", "/dns-query")
@@ -95,7 +95,7 @@ func resolveObliviousQuery(query odoh.ObliviousDNSMessage, useProxy bool, target
 }
 
 func fetchProxiesAndTargets(hostname string, client *http.Client) (response DiscoveryServiceResponse, err error) {
-	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE + "://" + hostname, nil)
+	req, err := http.NewRequest(http.MethodGet, TARGET_HTTP_MODE+"://"+hostname, nil)
 	if err != nil {
 		log.Fatalf("Unable to discover the proxies and targets")
 	}
@@ -151,9 +151,8 @@ func obliviousDnsRequest(c *cli.Context) error {
 	if useproxy == true {
 		fmt.Printf("Using %v as the proxy to send the ODOH Message\n", proxy)
 	}
-	client := http.Client{}
 
-	odohConfigs, err := fetchTargetConfig(targetIP, &client)
+	odohConfigs, err := fetchTargetConfigs(targetIP)
 	if err != nil {
 		return err
 	}
@@ -173,6 +172,7 @@ func obliviousDnsRequest(c *cli.Context) error {
 		return err
 	}
 
+	client := http.Client{}
 	odohMessage, err := resolveObliviousQuery(odohQuery, useproxy, targetIP, proxy, &client)
 	if err != nil {
 		return err

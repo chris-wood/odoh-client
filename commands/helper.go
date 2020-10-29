@@ -1,8 +1,8 @@
 package commands
 
 import (
+	odoh "github.com/cloudflare/odoh-go"
 	"github.com/miekg/dns"
-	"github.com/chris-wood/odoh"
 )
 
 // Function for Converting CLI DNS Query Type to the uint16 Datatype

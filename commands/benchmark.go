@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	odoh "github.com/cloudflare/odoh-go"
 	"github.com/miekg/dns"
-	"github.com/chris-wood/odoh"
 	"github.com/urfave/cli"
 	"log"
 	mathrand "math/rand"
@@ -37,8 +37,8 @@ type experiment struct {
 	DnsType         uint16
 	TargetPublicKey odoh.ObliviousDoHConfigContents
 	// Instrumentation
-	Proxy       string
-	Target      string
+	Proxy  string
+	Target string
 	// Timing parameters
 	IngestedFrom string
 }
@@ -58,7 +58,7 @@ type experimentResult struct {
 	Target      string
 	Timestamp   runningTime
 	// experiment status
-	Status bool
+	Status       bool
 	IngestedFrom string
 	ProtocolType string
 	ExperimentID string
@@ -197,7 +197,7 @@ func (e *experiment) run(client *http.Client, channel chan experimentResult) {
 		Target:      target,
 		Timestamp:   rt,
 		// Experiment status
-		Status: true,
+		Status:       true,
 		IngestedFrom: e.IngestedFrom,
 		ProtocolType: "ODOH",
 		ExperimentID: expId,
@@ -229,8 +229,7 @@ func getTickTriggerTiming(requestsPerMinute int) float64 {
 	return intervalDuration
 }
 
-
-// The benchmarkClient creates `--numclients` client instances performing `--pick` 
+// The benchmarkClient creates `--numclients` client instances performing `--pick`
 // queries over `--rate` requests/minute uniformly distributed.
 func benchmarkClient(c *cli.Context) {
 	var clientInstanceName string
@@ -257,7 +256,7 @@ func benchmarkClient(c *cli.Context) {
 	filepath := c.String("data")
 	filterCount := c.Uint64("pick")
 	numberOfParallelClients := c.Uint64("numclients")
-	requestPerMinute := c.Uint64("rate")  // requests/minute
+	requestPerMinute := c.Uint64("rate") // requests/minute
 	discoveryServiceHostname := c.String("discovery")
 	tickTrigger := getTickTriggerTiming(int(requestPerMinute))
 
@@ -290,7 +289,7 @@ func benchmarkClient(c *cli.Context) {
 	targets := availableServices.Targets
 	proxies := availableServices.Proxies
 	for _, target := range targets {
-		configs, err := fetchTargetConfig(target, instance.client[0])
+		configs, err := fetchTargetConfigs(target)
 		if err != nil {
 			log.Fatalf("Unable to obtain the ObliviousDoHConfigs from %v. Error %v", target, err)
 		}
@@ -306,7 +305,7 @@ func benchmarkClient(c *cli.Context) {
 	responseChannel := make(chan experimentResult, totalResponsesNeeded)
 
 	totalQueries := len(hostnames)
-	log.Printf("Tick Trigger : %v %v", tickTrigger, time.Duration(tickTrigger) * time.Minute)
+	log.Printf("Tick Trigger : %v %v", tickTrigger, time.Duration(tickTrigger)*time.Minute)
 
 	requestPerMinuteTick := time.NewTicker(time.Duration(tickTrigger) * time.Second)
 
@@ -323,9 +322,9 @@ func benchmarkClient(c *cli.Context) {
 			for clientIndex := 0; clientIndex < int(numberOfParallelClients); clientIndex++ {
 				hostname := hostnames[index]
 				clientUsed := state.client[clientIndex]
-				log.Printf("Choosing [Client %v] to make a query", index % int(numberOfParallelClients))
+				log.Printf("Choosing [Client %v] to make a query", index%int(numberOfParallelClients))
 				chosenTarget := targets[mathrand.Intn(keysAvailable)]
-				chosenProxy  := proxies[mathrand.Intn(len(proxies))]
+				chosenProxy := proxies[mathrand.Intn(len(proxies))]
 				targetConfigContents, err := state.GetTargetConfigContents(chosenTarget)
 				if err != nil {
 					log.Fatalf("Unable to retrieve the PK requested")
