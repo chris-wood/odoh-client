@@ -8,6 +8,7 @@ import (
 	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -447,9 +448,8 @@ func (s x25519Scheme) DH(priv KEMPrivateKey, pub KEMPublicKey) ([]byte, error) {
 		return nil, fmt.Errorf("Private key not suitable for X25519")
 	}
 
-	var sharedSecret [32]byte
-	curve25519.ScalarMult(&sharedSecret, &xPriv.val, &xPub.val)
-	return sharedSecret[:], nil
+	sharedSecret, err := curve25519.X25519(xPriv.val[:], xPub.val[:])
+	return sharedSecret, err
 }
 
 func (s x25519Scheme) PublicKeySize() int {
@@ -552,8 +552,12 @@ func (s x448Scheme) DH(priv KEMPrivateKey, pub KEMPublicKey) ([]byte, error) {
 		return nil, fmt.Errorf("Public key not suitable for X448: %+v", pub)
 	}
 
-	var sharedSecret [56]byte
+	var sharedSecret, zero [56]byte
 	x448.ScalarMult(&sharedSecret, &xPriv.val, &xPub.val)
+	if subtle.ConstantTimeCompare(sharedSecret[:], zero[:]) == 1 {
+		return nil, fmt.Errorf("bad input point: low order point")
+	}
+
 	return sharedSecret[:], nil
 }
 
@@ -852,7 +856,7 @@ func (s hkdfScheme) Expand(prk, info []byte, outLen int) []byte {
 }
 
 func (s hkdfScheme) LabeledExtract(salt []byte, suiteID []byte, label string, ikm []byte) []byte {
-	labeledIKM := append([]byte(rfcLabel+" "), suiteID...)
+	labeledIKM := append([]byte(rfcLabel), suiteID...)
 	labeledIKM = append(labeledIKM, []byte(label)...)
 	labeledIKM = append(labeledIKM, ikm...)
 	return s.Extract(salt, labeledIKM)
@@ -865,7 +869,7 @@ func (s hkdfScheme) LabeledExpand(prk []byte, suiteID []byte, label string, info
 
 	lengthBuffer := make([]byte, 2)
 	binary.BigEndian.PutUint16(lengthBuffer, uint16(L))
-	labeledLength := append(lengthBuffer, []byte(rfcLabel+" ")...)
+	labeledLength := append(lengthBuffer, []byte(rfcLabel)...)
 	labeledInfo := append(labeledLength, suiteID...)
 	labeledInfo = append(labeledInfo, []byte(label)...)
 	labeledInfo = append(labeledInfo, info...)

@@ -2,6 +2,7 @@ package commands
 
 import (
 	"errors"
+	"strings"
 	"fmt"
 	odoh "github.com/cloudflare/odoh-go"
 	"github.com/miekg/dns"
@@ -30,6 +31,10 @@ func fetchTargetConfigsFromWellKnown(targetName string) (odoh.ObliviousDoHConfig
 }
 
 func fetchTargetConfigsFromDNS(targetName string) (odoh.ObliviousDoHConfigs, error) {
+	if !strings.HasSuffix(targetName, ".") {
+		targetName = targetName + "."
+	}
+
 	dnsQuery := new(dns.Msg)
 	dnsQuery.SetQuestion(targetName, dns.TypeHTTPS)
 	dnsQuery.RecursionDesired = true
@@ -90,7 +95,7 @@ func getTargetConfigs(c *cli.Context) error {
 		fmt.Println("ObliviousDoHConfigs:")
 		for i, config := range odohConfigs.Configs {
 			configContents := config.Contents
-			fmt.Printf("  Config %d: Version(0x%04x), KEM(0x%04x), KDF(0x%04x), AEAD(0x%04x)\n", (i + 1), config.Version, configContents.KemID, configContents.KdfID, configContents.AeadID)
+			fmt.Printf("  Config %d: Version(0x%04x), KEM(0x%04x), KDF(0x%04x), AEAD(0x%04x) KeyID(%x)\n", (i + 1), config.Version, configContents.KemID, configContents.KdfID, configContents.AeadID, configContents.KeyID())
 		}
 	} else {
 		fmt.Printf("%x", odohConfigs.Marshal())

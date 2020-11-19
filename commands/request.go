@@ -79,6 +79,7 @@ func resolveObliviousQuery(query odoh.ObliviousDNSMessage, useProxy bool, target
 
 	responseHeader := resp.Header.Get("Content-Type")
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
+
 	if err != nil {
 		return odoh.ObliviousDNSMessage{}, err
 	}
@@ -139,20 +140,15 @@ func plainDnsRequest(c *cli.Context) error {
 func obliviousDnsRequest(c *cli.Context) error {
 	domainName := c.String("domain")
 	dnsTypeString := c.String("dnstype")
-	targetIP := c.String("target")
+	targetName := c.String("target")
 	proxy := c.String("proxy")
 
 	var useproxy bool
 	if len(proxy) > 0 {
-		fmt.Println("Using proxy since proxy is specified.")
 		useproxy = true
 	}
 
-	if useproxy == true {
-		fmt.Printf("Using %v as the proxy to send the ODOH Message\n", proxy)
-	}
-
-	odohConfigs, err := fetchTargetConfigs(targetIP)
+	odohConfigs, err := fetchTargetConfigs(targetName)
 	if err != nil {
 		return err
 	}
@@ -164,22 +160,26 @@ func obliviousDnsRequest(c *cli.Context) error {
 	dnsQuery.SetQuestion(domainName, dnsType)
 	packedDnsQuery, err := dnsQuery.Pack()
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	odohQuery, queryContext, err := createOdohQuestion(packedDnsQuery, odohConfig.Contents)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	client := http.Client{}
-	odohMessage, err := resolveObliviousQuery(odohQuery, useproxy, targetIP, proxy, &client)
+	odohMessage, err := resolveObliviousQuery(odohQuery, useproxy, targetName, proxy, &client)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
 	dnsResponse, err := validateEncryptedResponse(odohMessage, queryContext)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 
